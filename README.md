@@ -1,10 +1,10 @@
 # k0sNgin
 
-A FastAPI application with a custom INI-like configuration parser.
+A FastAPI application with a conf-file format parser.
 
 ## Features
 
-- **Custom INI Parser**: Parses a custom INI-like format without sections
+- **Conf Format Parser**: Parses Unix-style conf files with line continuation
 - **Line Continuation**: Supports indented lines that continue previous values
 - **Special Keys**: Handles keys starting with `/`
 - **REST API**: FastAPI endpoints for parsing configuration content
@@ -28,7 +28,7 @@ Once the server is running, you can access:
 ### API Endpoints
 
 - `GET /` - Returns a simple "Hello World" message
-- `POST /parse` - Parse custom INI-like configuration content
+- `POST /parse` - Parse conf-file format content
 - `GET /format-info` - Get information about the supported format
 
 ### Example Usage
@@ -62,7 +62,7 @@ curl -X POST "http://localhost:8000/parse" \
 
 ### Supported Format
 
-The parser supports a custom INI-like format with these features:
+The parser supports the Unix conf-file format with these features:
 
 - **Key-value pairs**: `key = value`
 - **Line continuation**: Indented lines continue the previous value
