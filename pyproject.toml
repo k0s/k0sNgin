@@ -7,3 +7,13 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.119.0",
 ]
+
+[project.scripts]
+conf2json = "k0sngin.scripts.conf2json:main"
+
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/k0sngin"]
