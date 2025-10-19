@@ -93,7 +93,7 @@ The parser supports the Unix conf-file format with these features:
 ```ini
 /title = My Title
 key = value
-empty = 
+empty =
 ```
 
 **Line continuation:**

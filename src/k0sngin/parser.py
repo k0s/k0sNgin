@@ -14,17 +14,17 @@ import re
 
 class ConfigParser:
     """Parser for custom INI-like format without sections."""
-    
+
     def __init__(self):
         self.data: Dict[str, str] = {}
-    
+
     def parse(self, content: str) -> Dict[str, str]:
         """
         Parse the configuration content.
-        
+
         Args:
             content: The configuration content as a string
-            
+
         Returns:
             Dictionary of key-value pairs
         """
@@ -33,14 +33,14 @@ class ConfigParser:
         current_key = None
         current_value_parts = []
         orphaned_lines = []
-        
+
         for line_num, line in enumerate(lines, 1):
             line = line.rstrip()  # Remove trailing whitespace
-            
+
             # Skip empty lines
             if not line:
                 continue
-            
+
             # Check if this is a continuation line (starts with whitespace)
             if line.startswith((' ', '\t')):
                 if current_key is not None:
@@ -50,13 +50,13 @@ class ConfigParser:
                     # This is an orphaned continuation line
                     orphaned_lines.append(f"Line {line_num}: {line}")
                 continue
-            
+
             # Save the previous key-value pair if we have one
             if current_key is not None:
                 self.data[current_key] = ' '.join(current_value_parts)
                 current_key = None
                 current_value_parts = []
-            
+
             # Parse new key-value pair
             key, value = self._parse_line(line)
             if key is not None:
@@ -65,26 +65,26 @@ class ConfigParser:
             else:
                 # Invalid line that's not a continuation - treat as orphaned
                 orphaned_lines.append(f"Line {line_num}: {line}")
-        
+
         # Don't forget the last key-value pair
         if current_key is not None:
             self.data[current_key] = ' '.join(current_value_parts)
-        
+
         # Handle orphaned continuation lines
         if orphaned_lines:
             # For now, we'll include them as a special key
             # In a production system, you might want to raise an exception
             self.data['_orphaned_lines'] = '; '.join(orphaned_lines)
-        
+
         return self.data
-    
+
     def _parse_line(self, line: str) -> Tuple[Optional[str], str]:
         """
         Parse a single line into key and value.
-        
+
         Args:
             line: The line to parse
-            
+
         Returns:
             Tuple of (key, value) or (None, '') if line is invalid
         """
@@ -92,23 +92,23 @@ class ConfigParser:
         equal_pos = line.find('=')
         if equal_pos == -1:
             return None, ''
-        
+
         key = line[:equal_pos].strip()
         value = line[equal_pos + 1:].strip()
-        
+
         if not key:
             return None, ''
-        
+
         return key, value
-    
+
     def get(self, key: str, default: str = '') -> str:
         """Get a value by key."""
         return self.data.get(key, default)
-    
+
     def get_all(self) -> Dict[str, str]:
         """Get all key-value pairs."""
         return self.data.copy()
-    
+
     def has_key(self, key: str) -> bool:
         """Check if a key exists."""
         return key in self.data
@@ -117,10 +117,10 @@ class ConfigParser:
 def parse_config(content: str) -> Dict[str, str]:
     """
     Convenience function to parse configuration content.
-    
+
     Args:
         content: The configuration content as a string
-        
+
     Returns:
         Dictionary of key-value pairs
     """
@@ -131,10 +131,10 @@ def parse_config(content: str) -> Dict[str, str]:
 def parse_config_file(filepath: str) -> Dict[str, str]:
     """
     Parse a configuration file.
-    
+
     Args:
         filepath: Path to the configuration file
-        
+
     Returns:
         Dictionary of key-value pairs
     """
