@@ -1,13 +1,13 @@
-    name: pre-commit
+name: pre-commit
 
-    on:
-      pull_request:
-      push:
-        branches: [ main ] # Or your primary branch
+on:
+  pull_request:
+  push:
+    branches: [ main ] # Or your primary branch
 
-    jobs:
-      pre-commit:
-        runs-on: ubuntu-latest
-        steps:
-          - uses: actions/checkout@v4 # Checkout your repository code
-          - uses: pre-commit/action@v3.0.0 # Run pre-commit hooks
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # Checkout your repository code
+      - uses: pre-commit/action@v3.0.0 # Run pre-commit hooks
