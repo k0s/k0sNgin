@@ -17,3 +17,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/k0sngin"]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3.0",
+]
