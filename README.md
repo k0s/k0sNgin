@@ -27,13 +27,27 @@ Once the server is running, you can access:
 
 ### API Endpoints
 
-- `GET /` - Returns a simple "Hello World" message
+- `GET /{file_path}` - Serve files from the configured directory (main endpoint)
 - `POST /parse` - Parse conf-file format content
 - `GET /format-info` - Get information about the supported format
+
+### Configuration
+
+The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine which directory to serve files from:
+
+- If `K0SNGIN_TOP_LEVEL` is set, files are served from that directory
+- If not set, files are served from the current working directory
+- The directory is printed on startup for verification
 
 ### Example Usage
 
 ```bash
+# Set the directory to serve files from
+export K0SNGIN_TOP_LEVEL=/path/to/your/files
+
+# Start the server
+uvicorn src.k0sngin.main:app --reload
+
 # Parse configuration content
 curl -X POST "http://localhost:8000/parse" \
   -H "Content-Type: application/json" \
@@ -41,6 +55,9 @@ curl -X POST "http://localhost:8000/parse" \
 
 # Get format information
 curl "http://localhost:8000/format-info"
+
+# Serve a file (e.g., foo/bar.txt)
+curl "http://localhost:8000/foo/bar.txt"
 ```
 
 ### Expected Output
@@ -115,3 +132,17 @@ The parser distinguishes between:
   "_orphaned_lines": "Line 1:     orphaned line first; Line 3:     orphaned after key"
 }
 ```
+
+### File Serving
+
+The application can serve files from a configured directory:
+
+- **Security**: Only files strictly within `K0SNGIN_TOP_LEVEL` are accessible
+- **Directory traversal protection**: Requests for files outside the allowed directory return 404
+- **Directory listing**: Not implemented (returns 501)
+- **Media types**: Automatically detected by FastAPI based on file extension
+
+**Security Features:**
+- Path resolution prevents directory traversal attacks
+- All requested paths are validated against the top-level directory
+- Non-existent files return 404 (not 403) to avoid information disclosure
