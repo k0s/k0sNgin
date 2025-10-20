@@ -50,12 +50,11 @@
     </style>
 </head>
 <body>
-    <h1>{{ directory_name }}</h1>
 
     {% if description %}
-    <div class="directory-info">
-        <strong>Description:</strong> {{ description }}
-    </div>
+    <h1>{{ description }}</h1>
+    {% else %}
+    <h1>{{ directory_name }}</h1>
     {% endif %}
 
     <ul class="file-list">

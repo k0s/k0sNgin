@@ -94,7 +94,7 @@ async def serve_file(file_path: str, request: Request):
         # Render the directory index template
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "directory_name": file_path or "Root",
+            "directory_name": file_path or "/",
             "description": description,
             "files": files
         })
