@@ -46,7 +46,7 @@ The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine w
 export K0SNGIN_TOP_LEVEL=/path/to/your/files
 
 # Start the server
-uvicorn src.k0sngin.main:app --reload
+uvicorn k0sngin.main:app --reload
 
 # Parse configuration content
 curl -X POST "http://localhost:8000/parse" \
