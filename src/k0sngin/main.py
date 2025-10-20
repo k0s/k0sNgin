@@ -2,6 +2,7 @@ import os
 import pathlib
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import Dict
 from .parser import parse_config
@@ -12,24 +13,28 @@ print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
 
 app = FastAPI()
 
+# Initialize Jinja2 templates
+templates = Jinja2Templates(directory="src/k0sngin/templates")
+
 
 @app.get("/{file_path:path}")
-async def serve_file(file_path: str):
+async def serve_file(file_path: str, request: Request):
     """
     Serve files from the K0SNGIN_TOP_LEVEL directory.
 
     Security: Only serves files strictly within the top-level directory.
-    Directories are not supported and will return NotImplemented.
+    Directories are rendered using Jinja2 templates with optional index.conf metadata.
 
     Args:
         file_path: The path to the file relative to K0SNGIN_TOP_LEVEL
 
     Returns:
-        FileResponse: The requested file content
+        FileResponse: The requested file content, or
+        TemplateResponse: Directory index page for directories
 
     Raises:
         HTTPException: 404 if file not found or outside allowed directory
-        HTTPException: 501 if requesting a directory
+        HTTPException: 403 if permission denied
     """
     # Resolve the requested file path
     requested_path = (TOP_LEVEL_DIR / file_path).resolve()
@@ -45,9 +50,54 @@ async def serve_file(file_path: str):
     if not requested_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
-    # Check if it's a directory (not supported)
+    # Check if it's a directory - render directory index
     if requested_path.is_dir():
-        raise HTTPException(status_code=501, detail="Directory listing not implemented")
+        # Look for index files or generate directory listing
+        files = {}
+        description = None
+
+        # Check for index.conf file for metadata
+        index_conf_path = requested_path / "index.conf"
+        if index_conf_path.exists():
+            try:
+                with open(index_conf_path, 'r') as f:
+                    conf_content = f.read()
+                parsed_conf = parse_config(conf_content)
+
+                # Extract description if available
+                if "/description" in parsed_conf:
+                    description = parsed_conf["/description"]
+
+                # Extract file information
+                for key, value in parsed_conf.items():
+                    if not key.startswith("/") and not key.startswith("_"):
+                        files[key] = {
+                            "description": value,
+                            "name": key
+                        }
+            except Exception:
+                # If parsing fails, fall back to basic directory listing
+                pass
+
+        # If no index.conf or parsing failed, do basic directory listing
+        if not files:
+            try:
+                for item in requested_path.iterdir():
+                    if item.is_file():
+                        files[item.name] = {
+                            "description": None,
+                            "name": item.name
+                        }
+            except PermissionError:
+                raise HTTPException(status_code=403, detail="Permission denied")
+
+        # Render the directory index template
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "directory_name": file_path or "Root",
+            "description": description,
+            "files": files
+        })
 
     # Serve the file
     return FileResponse(
