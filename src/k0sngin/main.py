@@ -56,8 +56,8 @@ async def serve_file(file_path: str, request: Request):
         files = {}
         description = None
 
-        # Check for index.conf file for metadata
-        index_conf_path = requested_path / "index.conf"
+        # Check for index.ini file for metadata
+        index_conf_path = requested_path / "index.ini"
         if index_conf_path.exists():
             try:
                 with open(index_conf_path, 'r') as f:
