@@ -146,3 +146,20 @@ The application can serve files from a configured directory:
 - Path resolution prevents directory traversal attacks
 - All requested paths are validated against the top-level directory
 - Non-existent files return 404 (not 403) to avoid information disclosure
+
+
+## Directory Indices
+
+Example format:
+
+```
+{
+    "description": "this is such and such a directory"
+    "files": {
+        "foo.txt": {
+            "name": "foo",
+            "description": "a text about foo",
+            "datestamp": ...
+        }
+    }
+}
