@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from typing import Dict
 from .parser import parse_config
 
+HERE = pathlib.Path(__file__).parent
+
 # Get the top-level directory from environment or use CWD
 TOP_LEVEL_DIR = pathlib.Path(os.environ.get("K0SNGIN_TOP_LEVEL", os.getcwd())).resolve()
 print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
@@ -14,7 +16,7 @@ print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
 app = FastAPI()
 
 # Initialize Jinja2 templates
-templates = Jinja2Templates(directory="src/k0sngin/templates")
+templates = Jinja2Templates(directory=HERE / "templates")
 
 
 @app.get("/{file_path:path}")
