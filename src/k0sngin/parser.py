@@ -9,7 +9,6 @@ This format supports:
 """
 
 from typing import Dict, List, Optional, Tuple
-import re
 
 
 class ConfigParser:

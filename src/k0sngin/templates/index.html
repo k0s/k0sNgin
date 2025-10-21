@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Directory Index - {{ directory_name }}</title>
+    {% if description %}
+    <meta name="description" content="{{ description }}">
+    <title>{{ description }}</title>
+    {% else %}
+    <title>{{ directory_name }}</title>
+    {% endif %}
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
