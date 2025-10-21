@@ -87,7 +87,14 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
         }
 
     # Populate template variables
-    template_variables["directory_name"] = requested_path.name or "/"
+    # Get the directory path from the request
+    path_info = request.scope.get("path", "/")
+    # Remove trailing slash for display, then add it back
+    if path_info == "/":
+        template_variables["directory_name"] = "/"
+    else:
+        template_variables["directory_name"] = path_info.rstrip("/") + "/"
+
     template_variables["request"] = request
 
     # Render the directory index template
