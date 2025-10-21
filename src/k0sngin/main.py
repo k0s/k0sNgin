@@ -56,12 +56,17 @@ async def serve_file(file_path: str, request: Request):
     if requested_path.is_dir():
         return serve_directory(requested_path, request, templates)
 
-    # Serve the file
-    return FileResponse(
+    # Serve the file with inline disposition
+    file_response = FileResponse(
         path=str(requested_path),
         filename=requested_path.name,
         media_type=None  # Let FastAPI determine the media type
     )
+
+    # Override the Content-Disposition header to display inline
+    file_response.headers["Content-Disposition"] = f"inline; filename=\"{requested_path.name}\""
+
+    return file_response
 
 
 class ParseRequest(BaseModel):
