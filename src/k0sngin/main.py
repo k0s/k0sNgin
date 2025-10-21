@@ -4,8 +4,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import Dict
 from .parser import parse_config
+from .directory import serve_directory
 
 HERE = pathlib.Path(__file__).parent
 
@@ -54,52 +54,7 @@ async def serve_file(file_path: str, request: Request):
 
     # Check if it's a directory - render directory index
     if requested_path.is_dir():
-        # Look for index files or generate directory listing
-        files = {}
-        description = None
-
-        # Check for index.ini file for metadata
-        index_conf_path = requested_path / "index.ini"
-        if index_conf_path.exists():
-            try:
-                with open(index_conf_path, 'r') as f:
-                    conf_content = f.read()
-                parsed_conf = parse_config(conf_content)
-
-                # Extract description if available
-                if "/description" in parsed_conf:
-                    description = parsed_conf["/description"]
-
-                # Extract file information
-                for key, value in parsed_conf.items():
-                    if not key.startswith("/") and not key.startswith("_"):
-                        files[key] = {
-                            "description": value,
-                            "name": key
-                        }
-            except Exception:
-                # If parsing fails, fall back to basic directory listing
-                pass
-
-        # If no index.conf or parsing failed, do basic directory listing
-        if not files:
-            try:
-                for item in requested_path.iterdir():
-                    if item.is_file():
-                        files[item.name] = {
-                            "description": None,
-                            "name": item.name
-                        }
-            except PermissionError:
-                raise HTTPException(status_code=403, detail="Permission denied")
-
-        # Render the directory index template
-        return templates.TemplateResponse("index.html", {
-            "request": request,
-            "directory_name": file_path or "/",
-            "description": description,
-            "files": files
-        })
+        return serve_directory(requested_path, request, templates)
 
     # Serve the file
     return FileResponse(
