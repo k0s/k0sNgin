@@ -14,7 +14,7 @@ A FastAPI application with a conf-file format parser.
 To run the FastAPI application with uvicorn:
 
 ```bash
-uvicorn src.k0sngin.main:app --reload
+uvicorn k0sngin.main:app --reload
 ```
 
 This will start the development server with auto-reload enabled. The application will be available at `http://localhost:8000`.
@@ -31,7 +31,7 @@ Once the server is running, you can access:
 - `POST /parse` - Parse conf-file format content
 - `GET /format-info` - Get information about the supported format
 
-### Configuration
+## Configuration
 
 The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine which directory to serve files from:
 
@@ -39,7 +39,19 @@ The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine w
 - If not set, files are served from the current working directory
 - The directory is printed on startup for verification
 
-### Example Usage
+## Formatters
+
+k0sNgin comes with formatters for the directory indices.
+
+
+* `css`: a space-separated list of CSS paths to include
+* `description`: a description of the index
+
+Run `k0s-formatters` for information on the formatters
+
+> TODO: these should be pluggable, a la decoupage
+
+## Example Usage
 
 ```bash
 # Set the directory to serve files from

@@ -11,6 +11,7 @@ dependencies = [
 
 [project.scripts]
 conf2json = "k0sngin.scripts.conf2json:main"
+k0s-formatters = "k0sngin.scripts.formatters:main"
 
 [build-system]
 requires = ["hatchling >= 1.26"]

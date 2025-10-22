@@ -6,7 +6,7 @@ import pathlib
 from fastapi import Request, HTTPException
 from fastapi.templating import Jinja2Templates
 
-
+from .formatter import apply_formatters
 from .parser import parse_config
 
 
@@ -30,12 +30,16 @@ def parse_index_conf(index_conf_path: pathlib.Path) -> dict:
         conf_content = f.read()
     parsed =  parse_config(conf_content)
 
-    # Extract description if available
-    # TODO: handle all `/...` keys
-    if "/description" in parsed:
-        description = parsed["/description"]
-    else:
-        description = None
+    # Extract formatters
+    formatters = {}
+    for item in list(parsed.keys()):
+        if item.startswith("/"):
+            key = item[1:].strip()
+            if not key:
+                raise ValueError(f"Empty key: {item}")
+            value = parsed.pop(item).strip()
+            formatters[key] = value
+
 
     # Extract file information
     files = {}
@@ -46,7 +50,7 @@ def parse_index_conf(index_conf_path: pathlib.Path) -> dict:
                 "name": key
             }
     return {
-        "description": description,
+        "formatters": formatters,
         "files": files
     }
 
@@ -69,6 +73,7 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             pass
 
     # If no index.conf or parsing failed, do basic directory listing
+    # TODO: this should be done first and then refined from `index.ini`
     if template_variables is None:
         files = {}
         try:
@@ -82,9 +87,13 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             raise HTTPException(status_code=404, detail="Not found")
 
         template_variables = {
-            "description": None,
             "files": files
         }
+
+    # Apply formatters
+    formatters = template_variables.pop("formatters", None)
+    if formatters is not None:
+        template_variables = apply_formatters(formatters, requested_path, request, template_variables)
 
     # Populate template variables
     # Get the directory path from the request
