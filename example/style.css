@@ -1,0 +1,42 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    line-height: 1.6;
+}
+h1 {
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+.file-list {
+    list-style: none;
+    padding: 0;
+}
+.file-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.file-item:last-child {
+    border-bottom: none;
+}
+.file-link {
+    text-decoration: none;
+    color: #0066cc;
+    font-weight: 500;
+}
+.file-link:hover {
+    text-decoration: underline;
+}
+.file-description {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 20px;
+}
+.directory-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
