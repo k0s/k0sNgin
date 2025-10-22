@@ -61,7 +61,31 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     Look for index.ini file for metadata and generate directory listing.
     """
 
-    template_variables = None
+    template_variables = {
+        "files": {}
+    }
+
+    # Get directory listing
+    files = {}
+    for item in requested_path.iterdir():
+
+        try:
+            # Determine file type
+            type = None
+            if item.is_file():
+                type = 'file'
+            elif item.is_dir():
+                type = 'directory'
+
+            files[item.name] = {
+                "name": item.name,
+                "type": type
+                # TODO: created, last modified, size...
+            }
+        except PermissionError:
+            # Just skip for now
+            # We should log this eventually
+            continue
 
     # Check for index.ini file for metadata
     index_conf_path = requested_path / "index.ini"
@@ -72,23 +96,12 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             # If parsing fails, fall back to basic directory listing
             pass
 
-    # If no index.conf or parsing failed, do basic directory listing
-    # TODO: this should be done first and then refined from `index.ini`
-    if template_variables is None:
-        files = {}
-        try:
-            for item in requested_path.iterdir():
-                if item.is_file():
-                    files[item.name] = {
-                        "description": None,
-                        "name": item.name
-                    }
-        except PermissionError:
-            raise HTTPException(status_code=404, detail="Not found")
 
-        template_variables = {
-            "files": files
-        }
+    # Augment parsed data with directory listing metadata
+    for name, data in files.items():
+        if name not in template_variables['files']:
+            template_variables['files'][name] = data
+
 
     # Apply formatters
     formatters = template_variables.pop("formatters", None)
