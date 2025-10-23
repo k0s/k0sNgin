@@ -1,7 +1,7 @@
 import os
 import pathlib
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from .parser import parse_config
@@ -52,8 +52,12 @@ async def serve_file(file_path: str, request: Request):
     if not requested_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
-    # Check if it's a directory - render directory index
+    # Check if it's a directory - redirect to trailing slash version
     if requested_path.is_dir():
+        # If the URL doesn't end with a slash, redirect to the version with a slash
+        # But don't redirect if we're already at the root with a slash
+        if file_path.strip('/') and not file_path.endswith('/'):
+            return RedirectResponse(url=f"{file_path}/", status_code=301)
         return serve_directory(requested_path, request, templates)
 
     # Serve the file with inline disposition
