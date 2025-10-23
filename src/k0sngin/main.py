@@ -6,11 +6,10 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from .parser import parse_config
 from .directory import serve_directory
+from .path import TOP_LEVEL_DIR
 
 HERE = pathlib.Path(__file__).parent
 
-# Get the top-level directory from environment or use CWD
-TOP_LEVEL_DIR = pathlib.Path(os.environ.get("K0SNGIN_TOP_LEVEL", os.getcwd())).resolve()
 print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
 
 app = FastAPI()
