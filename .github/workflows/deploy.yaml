@@ -1,0 +1,54 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # For WIF with Google Cloud
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Set up Cloud SDK
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Configure Docker to use gcloud as a credential helper
+      - name: Configure Docker
+        run: gcloud auth configure-docker
+
+      # Build and push Docker image
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t gcr.io/k0sngin/k0sninja:${{ github.sha }} .
+          docker push gcr.io/k0sngin/k0sninja:${{ github.sha }}
+          docker tag gcr.io/k0sngin/k0sninja:${{ github.sha }} gcr.io/k0sngin/k0sninja:latest
+          docker push gcr.io/k0sngin/k0sninja:latest
+
+      # Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.0.0"
+
+      # Deploy with Terraform
+      - name: Terraform Init
+        working-directory: infra/terraform
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve
