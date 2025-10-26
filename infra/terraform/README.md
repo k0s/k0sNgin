@@ -178,6 +178,9 @@ gcloud projects add-iam-policy-binding k0sngin \
 gcloud projects add-iam-policy-binding k0sngin \
     --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
     --role="roles/artifactregistry.writer"
+gcloud projects add-iam-policy-binding k0sngin \
+    --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountUser"
 
 # Create and download key
 gcloud iam service-accounts keys create github-key.json \
@@ -261,6 +264,19 @@ gcloud projects add-iam-policy-binding k0sngin \
 gcloud projects add-iam-policy-binding k0sngin \
     --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
     --role="roles/container.developer"
+```
+
+After adding the permission, trigger a new GitHub Actions run.
+
+### Error: "iam.serviceaccounts.actAs denied" in GitHub Actions
+
+This means your service account cannot act as (use) another service account:
+
+```bash
+# Add the missing permission
+gcloud projects add-iam-policy-binding k0sngin \
+    --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountUser"
 ```
 
 After adding the permission, trigger a new GitHub Actions run.
