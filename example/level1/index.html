@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Level 1 Template</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f0f8ff;
+        }
+        .header {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .file-list {
+            list-style: none;
+            padding: 0;
+        }
+        .file-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: white;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+        }
+        .directory {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .file {
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="header">📁 {{ directory_name }}</h1>
+
+    {% if description %}
+        <p><strong>Description:</strong> {{ description }}</p>
+    {% endif %}
+
+    <h2>Files and Directories:</h2>
+    <ul class="file-list">
+        {% for name, data in files.items() %}
+            <li class="file-item">
+                {% if data.type == 'directory' %}
+                    <span class="directory">📁 {{ name }}/</span>
+                {% else %}
+                    <span class="file">📄 {{ name }}</span>
+                {% endif %}
+                {% if data.description %}
+                    - {{ data.description }}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <p><em>This is a custom template for level1 directory!</em></p>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if description %}
+    <meta name="description" content="{{ description }}">
+    <title>{{ description }}</title>
+    {% else %}
+    <title>{{ directory_name }}</title>
+    {% endif %}
+
+    {% if css %}
+    {% for stylesheet in css %}
+    <link rel="stylesheet" type="text/css" href="{{ stylesheet }}" />
+    {% endfor %}
+    {% endif %}
+</head>
+<body>
+
+    {% if description %}
+    <h1>{{ description }}</h1>
+    {% else %}
+    <h1>{{ directory_name }}</h1>
+    {% endif %}
+
+
+    <h2>This is a subpage</h2>
+
+    <ul class="file-list">
+        {% for file_name, file_info in files.items() %}
+        <li class="file-item">
+            <a href="{{ file_name }}" class="file-link">{{ file_name }}</a>
+            {% if file_info.description %}
+            <div class="file-description">{{ file_info.description }}</div>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

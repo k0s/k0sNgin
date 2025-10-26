@@ -3,8 +3,9 @@ Directory indexer.
 """
 
 import pathlib
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, Response
 from fastapi.templating import Jinja2Templates
+from jinja2 import Environment, FileSystemLoader
 
 from .formatter import apply_formatters
 from .parser import parse_config
@@ -159,5 +160,16 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
 
     template_variables["request"] = request
 
-    # Render the directory index template
-    return templates.TemplateResponse("index.html", template_variables)
+    # Check for local template override
+    template_name = "index.html"  # TODO: make this configurable
+    local_template_path = requested_path / template_name
+    if local_template_path.exists():
+        # Create a Jinja2 environment for the local template
+        env = Environment(loader=FileSystemLoader(str(requested_path)))
+        template = env.get_template("index.html")
+        html_content = template.render(**template_variables)
+        return Response(content=html_content, media_type="text/html")
+    else:
+        # Use default template
+        # TODO: reconcile with the local template path mechanism above
+        return templates.TemplateResponse(template_name, template_variables)

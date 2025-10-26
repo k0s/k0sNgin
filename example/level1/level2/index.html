@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level 2 Deep Template</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(0,0,0,0.3);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .header {
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .file-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.2s;
+        }
+        .file-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.2);
+        }
+        .directory {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        .file {
+            color: #4ecdc4;
+        }
+        .description {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">🚀 {{ directory_name }}</h1>
+
+        {% if description %}
+            <div class="description">
+                <strong>📝 Description:</strong> {{ description }}
+            </div>
+        {% endif %}
+
+        <h2>📂 Contents:</h2>
+        <div class="file-grid">
+            {% for name, data in files.items() %}
+                <div class="file-card">
+                    {% if data.type == 'directory' %}
+                        <div class="directory">📁 {{ name }}/</div>
+                    {% else %}
+                        <div class="file">📄 {{ name }}</div>
+                    {% endif %}
+                    {% if data.description %}
+                        <small style="color: #ddd; font-size: 0.9em;">{{ data.description }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <p style="margin-top: 30px; text-align: center; opacity: 0.8;">
+            <em>🎨 Custom Level 2 Template with Grid Layout</em>
+        </p>
+    </div>
+</body>
+</html>
