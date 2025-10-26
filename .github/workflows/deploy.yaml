@@ -49,6 +49,14 @@ jobs:
         working-directory: infra/terraform
         run: terraform init
 
+      # Import existing resources if they exist (idempotent)
+      - name: Import Existing Resources
+        working-directory: infra/terraform
+        continue-on-error: true
+        run: |
+          terraform import google_cloud_run_v2_service.default projects/k0sngin/locations/us-west1/services/k0sninja
+          terraform import google_cloud_run_v2_service_iam_member.noauth "projects/k0sngin/locations/us-west1/services/k0sninja roles/run.invoker allUsers"
+
       - name: Terraform Apply
         working-directory: infra/terraform
         run: terraform apply -auto-approve
