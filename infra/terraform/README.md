@@ -175,6 +175,9 @@ gcloud projects add-iam-policy-binding k0sngin \
 gcloud projects add-iam-policy-binding k0sngin \
     --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
     --role="roles/container.developer"
+gcloud projects add-iam-policy-binding k0sngin \
+    --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
+    --role="roles/artifactregistry.writer"
 
 # Create and download key
 gcloud iam service-accounts keys create github-key.json \
@@ -243,6 +246,24 @@ gcloud services enable cloudbuild.googleapis.com
 ```bash
 gcloud auth configure-docker
 ```
+
+### Error: "artifactregistry.repositories.uploadArtifacts denied" in GitHub Actions
+
+This means your service account is missing the Artifact Registry Writer role:
+
+```bash
+# Add the missing permission
+gcloud projects add-iam-policy-binding k0sngin \
+    --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
+    --role="roles/artifactregistry.writer"
+
+# Also ensure it has container developer role
+gcloud projects add-iam-policy-binding k0sngin \
+    --member="serviceAccount:github-actions@k0sngin.iam.gserviceaccount.com" \
+    --role="roles/container.developer"
+```
+
+After adding the permission, trigger a new GitHub Actions run.
 
 ### View Cloud Run logs
 
