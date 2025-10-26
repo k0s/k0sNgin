@@ -1,0 +1,20 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t k0sngin .
+      - run: docker run -d --name k0sngin -p 8000:8000 -e K0SNGIN_TOP_LEVEL='/app/example' k0sngin
+      - run: docker ps
+      - run: |
+          sleep 5
+          curl --fail http://localhost:8000/
+      - run: docker stop k0sngin
+      - run: docker rm k0sngin
