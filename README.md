@@ -175,3 +175,24 @@ Example format:
         }
     }
 }
+```
+
+## Docker
+
+To build with docker:
+
+```
+docker build -t k0sngin .
+```
+
+To run and serve the `example/` directory
+
+```
+docker run -p 8000:8000 -e K0SNGIN_TOP_LEVEL='/app/example' k0sngin
+```
+
+To debug the container after building:
+
+```
+docker run k0sngin sh
+```
