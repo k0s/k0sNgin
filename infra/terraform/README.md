@@ -200,7 +200,10 @@ In your GitHub repository settings:
 The workflow (`.github/workflows/deploy.yaml`) will:
 - Trigger on pushes to `main`
 - Build and push the Docker image to GCR
+- Import existing resources into Terraform state (if they exist)
 - Deploy via Terraform
+
+**Note:** The workflow automatically imports existing Cloud Run resources before applying changes, making it idempotent and safe to run multiple times.
 
 ### Using Cloud Build (Alternative)
 
@@ -280,6 +283,21 @@ gcloud projects add-iam-policy-binding k0sngin \
 ```
 
 After adding the permission, trigger a new GitHub Actions run.
+
+### Error: "Resource already exists" in GitHub Actions
+
+If you see an error like "Resource 'k0sninja' already exists" when deploying with GitHub Actions:
+
+This happens when resources were created manually before Terraform was set up. The workflow automatically tries to import existing resources before applying. If you continue to see this error, you can manually import the resources:
+
+```bash
+# Import locally
+cd infra/terraform
+terraform import google_cloud_run_v2_service.default projects/k0sngin/locations/us-west1/services/k0sninja
+terraform import google_cloud_run_v2_service_iam_member.noauth "projects/k0sngin/locations/us-west1/services/k0sninja roles/run.invoker allUsers"
+```
+
+Or, for a fresh start, delete the existing resources and let Terraform recreate them.
 
 ### View Cloud Run logs
 
