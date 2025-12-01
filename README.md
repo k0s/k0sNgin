@@ -1,13 +1,18 @@
 # k0sNgin
 
 A FastAPI application with a conf-file format parser.
+k0sNgin is meant to be a replacement for http://k0s.org ,
+in particular the [decoupage](https://pypi.org/project/decoupage/) dynamic fileserver.
 
-## Features
+The general idea: files will be served with transformations applied.
+Directory indices can be displayed in a variety of formats.
+
+
+## Configuration File Format
 
 - **Conf Format Parser**: Parses Unix-style conf files with line continuation
 - **Line Continuation**: Supports indented lines that continue previous values
 - **Special Keys**: Handles keys starting with `/`
-- **REST API**: FastAPI endpoints for parsing configuration content
 
 ## Running the Application
 
@@ -51,7 +56,7 @@ Run `k0s-formatters` for information on the formatters
 
 > TODO: these should be pluggable, a la decoupage
 
-## Example Usage
+## Usage
 
 ```bash
 # Set the directory to serve files from
