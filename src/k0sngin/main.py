@@ -56,7 +56,7 @@ async def serve_file(file_path: str, request: Request):
         # If the URL doesn't end with a slash, redirect to the version with a slash
         # But don't redirect if we're already at the root with a slash
         if file_path.strip('/') and not file_path.endswith('/'):
-            return RedirectResponse(url=f"{file_path}/", status_code=301)
+            return RedirectResponse(url=f"/{file_path}/", status_code=301)
         return serve_directory(requested_path, request, templates)
 
     # Serve the file with inline disposition
