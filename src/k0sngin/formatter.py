@@ -23,20 +23,6 @@ class Formatter(ABC):
         """Format the directory index."""
 
 
-class DescriptionFormatter(Formatter):
-    """Description for the directory index."""
-
-    @classmethod
-    def key(cls) -> str:
-        """Key for the formatter."""
-        return "description"
-
-    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> str:
-        return {
-            "description": value.strip()
-        }
-
-
 class CSSFormatter(Formatter):
     """Space-separated list of CSS paths to include in the directory index."""
 
@@ -52,9 +38,68 @@ class CSSFormatter(Formatter):
             return None
         return {"css": value.split()}
 
+class TitleFormatter(Formatter):
+    """Title for the directory index.
+    Splits a description into a title and a description via a separator in
+    the description.  The template will now have an additional variable,
+    'title', per file
+    Arguments:
+    * separator: what separator to use (':' by default)
+    """
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "title"
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> dict:
+        """Format the directory index."""
+        value = value.strip()
+        if not value:
+            return None
+
+        # Default separator
+        separator = ':'
+
+        # Set webpage title
+        result = {}
+
+        if ':' in value:
+            _title, url = [i.strip() for i in value.split(':', 1)]
+            if '://' in url:
+                # Title with URL link
+                result['title'] = _title
+                result['link'] = url
+            else:
+                # No URL, use full value as title
+                result['title'] = value
+        else:
+            # No colon, use value as title
+            result['title'] = value
+
+        # Process files: split descriptions with separator
+        files = variables.get('files', {})
+        for file_name, file_data in files.items():
+            description = file_data.get('description')
+            if description and separator in description:
+                # Split description into title and description
+                file_title, file_description = description.split(separator, 1)
+                file_title = file_title.strip()
+                file_description = file_description.strip()
+                if not file_title:
+                    file_title = file_data.get('name', file_name)
+                file_data['title'] = file_title
+                file_data['description'] = file_description
+            else:
+                # No separator: use description as title, clear description
+                file_data['title'] = description
+                file_data['description'] = None
+
+        return result
+
 all_formatters = [
     CSSFormatter,
-    DescriptionFormatter,
+    TitleFormatter,
 ]
 
 formatters = {formatter.key(): formatter for formatter in all_formatters}

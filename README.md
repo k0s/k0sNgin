@@ -50,7 +50,16 @@ k0sNgin comes with formatters for the directory indices.
 
 
 * `css`: a space-separated list of CSS paths to include
-* `description`: a description of the index
+* `title`: title the page and allow addition title/description separation for file
+
+```
+Formatter not found: all
+Formatter not found: ignore
+Formatter not found: include
+Formatter not found: icon
+Formatter not found: transformer
+```
+
 
 Run `k0s-formatters` for information on the formatters
 
