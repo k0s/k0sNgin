@@ -4,6 +4,7 @@ Directory indexer.
 
 import pathlib
 from fastapi import Request, HTTPException, Response
+from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader
 
@@ -164,7 +165,18 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     template_name = "index.html"  # TODO: make this configurable
     local_template_path = requested_path / template_name
     if local_template_path.exists():
-        # Create a Jinja2 environment for the local template
+        # Try to verify the file is UTF-8 decodable before using as template
+        try:
+            with open(local_template_path, 'r', encoding='utf-8') as f:
+                f.read()
+        except UnicodeDecodeError:
+            # File is not UTF-8, serve it as-is instead of as a template
+            return FileResponse(
+                path=str(local_template_path),
+                media_type="text/html"
+            )
+
+        # File is UTF-8, use it as a template
         env = Environment(loader=FileSystemLoader(str(requested_path)))
         template = env.get_template("index.html")
         html_content = template.render(**template_variables)

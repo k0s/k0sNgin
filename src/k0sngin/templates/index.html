@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% if description %}
-    <meta name="description" content="{{ description }}">
-    <title>{{ description }}</title>
+    {% if title %}
+    <meta name="description" content="{{ title }}">
+    <title>{{ title }}</title>
     {% else %}
     <title>{{ directory_name }}</title>
     {% endif %}
@@ -18,8 +18,8 @@
 </head>
 <body>
 
-    {% if description %}
-    <h1>{{ description }}</h1>
+    {% if title %}
+    <h1>{{ title }}</h1>
     {% else %}
     <h1>{{ directory_name }}</h1>
     {% endif %}
