@@ -38,6 +38,20 @@ class CSSFormatter(Formatter):
             return None
         return {"css": value.split()}
 
+
+class IconFormatter(Formatter):
+    """URL for favicon for the directory index."""
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "icon"
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> str:
+        """Format the directory index."""
+        return {"icon": value.strip()}
+
+
 class TitleFormatter(Formatter):
     """Title for the directory index.
     Splits a description into a title and a description via a separator in
@@ -100,6 +114,7 @@ class TitleFormatter(Formatter):
 all_formatters = [
     CSSFormatter,
     TitleFormatter,
+    IconFormatter,
 ]
 
 formatters = {formatter.key(): formatter for formatter in all_formatters}
