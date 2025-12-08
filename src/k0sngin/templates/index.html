@@ -10,6 +10,10 @@
     <title>{{ directory_name }}</title>
     {% endif %}
 
+    {% if icon %}
+    <link rel="icon" href="{{ icon }}" />
+    {% endif %}
+
     {% if css %}
     {% for stylesheet in css %}
     <link rel="stylesheet" type="text/css" href="{{ stylesheet }}" />
