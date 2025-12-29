@@ -1,0 +1,23 @@
+---
+- name: Install k0sNgin
+  hosts: all
+  vars:
+    python_version: 3.13
+    k0sngin_path: "{{ ansible_user_dir }}/k0sngin"
+    uv_path: "{{ ansible_user_dir }}/.local/bin/uv"
+  tasks:
+    - name: Install uv
+      ansible.builtin.shell: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+      args:
+        creates: "{{ uv_path }}"
+    - name: Clone repository
+      ansible.builtin.git:
+        repo: https://github.com/k0s/k0sNgin.git
+        dest: "{{ k0sngin_path }}"
+        version: main
+    - name: Install k0sNgin
+      ansible.builtin.shell: |
+        "{{ uv_path }}" sync
+      args:
+        chdir: "{{ k0sngin_path }}"
