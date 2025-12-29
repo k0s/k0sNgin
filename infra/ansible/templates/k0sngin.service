@@ -1,0 +1,17 @@
+[Unit]
+Description=k0sngin
+After=network.target
+StartLimitIntervalSec=30
+StartLimitBurst=2
+
+[Service]
+Type=simple
+User={{ k0sngin_user }}
+Group={{ k0sngin_user }}
+WorkingDirectory={{ k0sngin_path }}
+EnvironmentFile=/etc/systemd/system/k0sngin.service.d/k0sngin.conf
+ExecStart={{ k0sngin_path }}/.venv/bin/uvicorn k0sngin.main:app --port 8000 --host 0.0.0.0
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
