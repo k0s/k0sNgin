@@ -1,0 +1,75 @@
+---
+# Runs k0sNgin on the host.
+# This is the systemd equivalent of running:
+#   cd ~/k0sngin
+#   export K0SNGIN_TOP_LEVEL="${HOME}/web/site" # or whatever you want to serve
+#   .venv/bin/uvicorn k0sngin.main:app --port 8000 --host 0.0.0.0
+#
+# Usage:
+#   You must set K0SNGIN_TOP_LEVEL before running this playbook.
+#   Example: ansible-playbook -e "K0SNGIN_TOP_LEVEL=${HOME}/web/site" run_k0sNgin.yaml
+#   The directory specified by K0SNGIN_TOP_LEVEL must exist on the remote host.
+
+- name: Run k0sNgin
+  hosts: all
+  vars:
+    k0sngin_path: "{{ ansible_user_dir }}/k0sngin"
+  tasks:
+    - name: Run whoami
+      ansible.builtin.command: whoami
+      register: whoami_result
+    - name: Set k0sngin_user from whoami result
+      ansible.builtin.set_fact:
+        k0sngin_user: "{{ whoami_result.stdout.strip() }}"
+    - name: Ensure K0SNGIN_TOP_LEVEL is set
+      ansible.builtin.assert:
+        that:
+          - K0SNGIN_TOP_LEVEL is defined
+          - K0SNGIN_TOP_LEVEL | length > 0
+        fail_msg: "K0SNGIN_TOP_LEVEL must be set. Example: ansible-playbook -e 'K0SNGIN_TOP_LEVEL=${HOME}/web/site' run_k0sNgin.yaml"
+        success_msg: "K0SNGIN_TOP_LEVEL is set to {{ K0SNGIN_TOP_LEVEL }}"
+    - name: Check if K0SNGIN_TOP_LEVEL directory exists on remote host
+      ansible.builtin.stat:
+        path: "{{ K0SNGIN_TOP_LEVEL }}"
+      register: k0sngin_top_level_stat
+    - name: Ensure K0SNGIN_TOP_LEVEL directory exists on remote host
+      ansible.builtin.assert:
+        that:
+          - k0sngin_top_level_stat.stat.exists
+          - k0sngin_top_level_stat.stat.isdir
+        fail_msg: "K0SNGIN_TOP_LEVEL directory '{{ K0SNGIN_TOP_LEVEL }}' does not exist on the remote host"
+        success_msg: "K0SNGIN_TOP_LEVEL directory '{{ K0SNGIN_TOP_LEVEL }}' exists on the remote host"
+    - name: Render k0sngin.service template to /etc/systemd/system
+      become: yes
+      ansible.builtin.template:
+        src: templates/k0sngin.service
+        dest: /etc/systemd/system/k0sngin.service
+        mode: "0644"
+        owner: root
+        group: root
+    - name: Make directory for k0sngin.service
+      become: yes
+      ansible.builtin.file:
+        path: /etc/systemd/system/k0sngin.service.d
+        state: directory
+        mode: "0750"
+        owner: root
+        group: root
+    - name: Render k0sngin.conf template to systemd environment file
+      become: yes
+      ansible.builtin.template:
+        src: templates/k0sngin.conf
+        dest: /etc/systemd/system/k0sngin.service.d/k0sngin.conf
+        mode: "0640"
+        owner: root
+        group: root
+    - name: Reload systemd daemon
+      become: yes
+      ansible.builtin.systemd:
+        daemon_reload: yes
+    - name: Enable and start k0sngin.service
+      become: yes
+      ansible.builtin.systemd:
+        name: k0sngin.service
+        state: started
+        enabled: yes
