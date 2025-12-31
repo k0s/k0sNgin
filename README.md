@@ -30,12 +30,6 @@ Once the server is running, you can access:
 - Interactive API docs (Swagger UI): `http://localhost:8000/docs`
 - Alternative API docs (ReDoc): `http://localhost:8000/redoc`
 
-### API Endpoints
-
-- `GET /{file_path}` - Serve files from the configured directory (main endpoint)
-- `POST /parse` - Parse conf-file format content
-- `GET /format-info` - Get information about the supported format
-
 ## Configuration
 
 The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine which directory to serve files from:
