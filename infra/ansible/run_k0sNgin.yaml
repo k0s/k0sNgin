@@ -71,5 +71,5 @@
       become: yes
       ansible.builtin.systemd:
         name: k0sngin.service
-        state: started
+        state: restarted
         enabled: yes
