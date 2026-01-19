@@ -38,6 +38,20 @@ The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine w
 - If not set, files are served from the current working directory
 - The directory is printed on startup for verification
 
+### Security Configuration
+
+For production deployments, configure these environment variables:
+
+- `K0SNGIN_PRODUCTION=true` - Disables API documentation endpoints (`/docs`, `/redoc`, `/openapi.json`)
+- `K0SNGIN_RATE_LIMIT=60` - Sets rate limit (requests per minute per IP, default: 60)
+- `K0SNGIN_ALLOW_LOCAL_TEMPLATES=false` - Disables rendering of user-controlled HTML files as Jinja2 templates (default: false, recommended for security)
+
+**Security Features:**
+- Path traversal protection (prevents access to files outside `K0SNGIN_TOP_LEVEL`)
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+- Rate limiting (configurable per IP)
+- Template injection protection (local templates disabled by default)
+
 ## Formatters
 
 k0sNgin comes with formatters for the directory indices.
@@ -61,43 +75,7 @@ Run `k0s-formatters` for information on the formatters
 
 ## Usage
 
-```bash
-# Set the directory to serve files from
-export K0SNGIN_TOP_LEVEL=/path/to/your/files
-
-# Start the server
-uvicorn k0sngin.main:app --reload
-
-# Parse configuration content
-curl -X POST "http://localhost:8000/parse" \
-  -H "Content-Type: application/json" \
-  -d '{"content": "/title = My Title\n    with continuation\nkey = value"}'
-
-# Get format information
-curl "http://localhost:8000/format-info"
-
-# Serve a file (e.g., foo/bar.txt)
-curl "http://localhost:8000/foo/bar.txt"
-```
-
-### Expected Output
-
-**Request:**
-```bash
-curl -X POST "http://localhost:8000/parse" \
-  -H "Content-Type: application/json" \
-  -d '{"content": "/title = My Title\n    with continuation\nkey = value"}'
-```
-
-**Response:**
-```json
-{
-  "/title": "My Title with continuation",
-  "key": "value"
-}
-```
-
-### Supported Format
+### Configuration Format
 
 The parser supports the Unix conf-file format with these features:
 
@@ -107,7 +85,7 @@ The parser supports the Unix conf-file format with these features:
 - **Empty values**: `key = ` (empty value)
 - **Orphaned lines**: Indented lines without a preceding key are reported
 
-#### Format Examples
+_Examples:_
 
 **Basic key-value pairs:**
 ```ini
@@ -138,8 +116,6 @@ absolute-power.txt = absolute power
 abyss.txt = the Abyss
 acting.txt = acting
 ```
-
-#### Parser Behavior
 
 The parser distinguishes between:
 - **Valid continuations**: Indented lines that immediately follow a key-value pair

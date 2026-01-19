@@ -1,8 +1,13 @@
 import os
 import pathlib
-from fastapi import FastAPI, HTTPException, Request
+import time
+from collections import defaultdict
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 from pydantic import BaseModel
 from .parser import parse_config
 from .directory import serve_directory
@@ -12,7 +17,74 @@ HERE = pathlib.Path(__file__).parent
 
 print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
 
-app = FastAPI()
+# Determine if we're in production (disable docs)
+PRODUCTION = os.environ.get("K0SNGIN_PRODUCTION", "false").lower() == "true"
+
+app = FastAPI(
+    docs_url="/docs" if not PRODUCTION else None,
+    redoc_url="/redoc" if not PRODUCTION else None,
+    openapi_url="/openapi.json" if not PRODUCTION else None,
+)
+
+# Rate limiting middleware
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, requests_per_minute: int = 60):
+        super().__init__(app)
+        self.requests_per_minute = requests_per_minute
+        self.request_counts = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        # Get client IP (consider X-Forwarded-For from Cloudflare)
+        client_ip = request.client.host if request.client else "unknown"
+        if "x-forwarded-for" in request.headers:
+            # Cloudflare sets this header
+            client_ip = request.headers["x-forwarded-for"].split(",")[0].strip()
+
+        # Clean old entries (older than 1 minute)
+        current_time = time.time()
+        self.request_counts[client_ip] = [
+            timestamp for timestamp in self.request_counts[client_ip]
+            if current_time - timestamp < 60
+        ]
+
+        # Check rate limit
+        if len(self.request_counts[client_ip]) >= self.requests_per_minute:
+            return Response(
+                content="Rate limit exceeded. Please try again later.",
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={"Retry-After": "60"}
+            )
+
+        # Record this request
+        self.request_counts[client_ip].append(current_time)
+
+        return await call_next(request)
+
+# Security headers middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Add security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Content Security Policy - adjust based on your needs
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+        return response
+
+# Configure rate limiting (default: 60 requests per minute per IP)
+rate_limit = int(os.environ.get("K0SNGIN_RATE_LIMIT", "60"))
+app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Initialize Jinja2 templates
 templates = Jinja2Templates(directory=HERE / "templates")

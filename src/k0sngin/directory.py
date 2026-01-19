@@ -2,6 +2,7 @@
 Directory indexer.
 """
 
+import os
 import pathlib
 from fastapi import Request, HTTPException, Response
 from fastapi.responses import FileResponse
@@ -162,9 +163,13 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     template_variables["request"] = request
 
     # Check for local template override
+    # SECURITY WARNING: Rendering user-controlled files as Jinja2 templates is a security risk.
+    # This feature should only be enabled if you trust all files in the served directory.
+    # Consider disabling this feature in production or restricting it to trusted paths.
+    allow_local_templates = os.environ.get("K0SNGIN_ALLOW_LOCAL_TEMPLATES", "false").lower() == "true"
     template_name = "index.html"  # TODO: make this configurable
     local_template_path = requested_path / template_name
-    if local_template_path.exists():
+    if local_template_path.exists() and allow_local_templates:
         # Try to verify the file is UTF-8 decodable before using as template
         try:
             with open(local_template_path, 'r', encoding='utf-8') as f:
@@ -177,10 +182,18 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             )
 
         # File is UTF-8, use it as a template
-        env = Environment(loader=FileSystemLoader(str(requested_path)))
+        # SECURITY: Create a sandboxed Jinja2 environment with restricted features
+        from jinja2.sandbox import SandboxedEnvironment
+        env = SandboxedEnvironment(loader=FileSystemLoader(str(requested_path)))
         template = env.get_template("index.html")
         html_content = template.render(**template_variables)
         return Response(content=html_content, media_type="text/html")
+    elif local_template_path.exists() and not allow_local_templates:
+        # If local template exists but feature is disabled, serve it as static HTML
+        return FileResponse(
+            path=str(local_template_path),
+            media_type="text/html"
+        )
     else:
         # Use default template
         # TODO: reconcile with the local template path mechanism above
