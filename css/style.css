@@ -1,0 +1,168 @@
+* {
+    font-family: sans-serif;
+}
+
+tt,code {
+    font-family: mono;
+}
+
+body {
+    background: black;
+    color: #FFFFFF;
+    width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+h1 {
+    color: black;
+    text-shadow: 0 0 0.2em #87F, 0 0 0.2em #87F, 0 0 0.2em #87F;
+}
+
+
+img {
+    border-style: none;
+}
+
+li {
+    list-style-image: url(/css/widgets/lil_globe2.png);
+}
+
+p {
+    font-size: 11pt;
+}
+
+pre {
+    font-family: monospace;
+}
+
+td {
+    border: thin solid #223366;
+}
+
+/* links */
+
+a:link {
+    color: #6666CC;
+    text-decoration: none;
+    background: transparent;
+}
+a:visited {
+    color: #4455BB;
+    text-decoration: none;
+    background: transparent;
+}
+a:hover {
+    color: #6666FF;
+    text-decoration: none;
+    background: #103;
+}
+a:active {
+    color: #9999CC;
+    text-decoration: underline;
+    background: #FFFFFF;
+}
+
+/* class-based styles */
+
+.error {
+    color: red;
+}
+
+.image a {
+    color: black;
+}
+
+.image a:hover {
+    color: #223366;
+}
+
+div.inclusion {
+    white-space: pre-wrap;
+}
+
+.noir {
+    color: black;
+    text-shadow: 0 0 0.2em #87F;
+}
+
+/* site navigation */
+
+.site-nav {
+    padding-bottom: 2em;
+    font-family: serif;
+}
+
+.site-nav li {
+    list-style-image: none;
+    background-image: url(/css/widgets/lil_globe2.png);
+}
+
+.site-nav ul {
+    list-style-type: none;
+    display: inline;
+    margin-top: 0em;
+    padding-top: 0em;
+}
+
+.site-nav a {
+    float: left;
+    margin-left: 0.3em;
+    margin-right: 0.3em;
+    font-weight: bold;
+    text-decoration: none;
+    background: #103;
+}
+
+.site-nav a:hover {
+    font-weight: bold;
+    background: #f00;
+}
+
+.site-nav a:link {
+    font-weight: bold;
+    background: #103;
+}
+
+.site-nav a:visited {
+    font-weight: bold;
+    background: #103;
+}
+
+.site-nav a:active {
+    font-weight: bold;
+    background: #103;
+}
+
+h1 a {
+color: black;
+}
+
+.disabled {
+color: gray;
+text-decoration: line-through;
+}
+
+.alert {
+font-weight: bold;
+font-size: 150%;
+color: red;
+text-decoration: none;
+border: thin solid red;
+}
+
+.date {
+font-size: small;
+color: lightgray;
+font-style: italic;
+text-align: right;
+float: right;
+}
+
+.quote {
+font-style: italic;
+}
+
+#listing li:hover {
+background-color: #001;
+}

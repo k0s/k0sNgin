@@ -1,0 +1,41 @@
+body {
+background-color: #cbcbcb;
+width: 100%;
+}
+
+* {
+color: #000;
+font-family: "Times New Roman", Times, serif;
+font-weight: bold;
+}
+
+.site-nav li {
+
+}
+
+span.header {
+font-size: 40px;
+}
+
+a:link {
+color: #00f;
+text-decoration: underline;
+}
+
+a:visited {
+color: #00f;
+text-decoration: line-through;
+}
+
+a:hover {
+color: #00f;
+background: #cbcbcb;
+}
+
+.site-nav li {
+background-image: url(/css/netscape/broken-image.gif);
+}
+
+li {
+list-style-image: url(/css/netscape/broken-image.gif);
+}

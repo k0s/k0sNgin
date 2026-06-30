@@ -1,0 +1,97 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/">
+
+<!--  <base target="_blank"> -->
+
+  <meta charset="UTF-8"/>
+  <title>Jeff's cryptomythic web page</title>
+
+  <!-- css stylesheets -->
+  <link rel="stylesheet" type="text/css"
+        href="css/style.css"/>
+    <link rel="stylesheet" type="text/css" href="css/dark.css" title="Default">
+    <link rel="alternate stylesheet" type="text/css" href="css/plain.css" title="plain">
+    <link rel="alternate stylesheet" type="text/css" href="css/neoretro.css" title="neoretro">
+    <link rel="alternate stylesheet" type="text/css" href="css/professional.css" title="professional">
+    <link rel="alternate stylesheet" type="text/css" href="css/noir-de-noir.css" title="noir-de-noir">
+  <style>
+    #csschoser {
+    width: 10px;
+    height: 10px;
+    top: 10px;
+    right: 10px;
+    background: url(widgets/lil_globe2.png);
+    padding: 0;
+    margin: 0;
+    }
+  </style>
+  <!-- favicon -->
+  <link rel="icon" href="pictures/gallery/avatar.gif" />
+</head>
+<body>
+
+  <script py:if="request.host.endswith('cat.dragged.in')" src="http://webneko.net/n200504.js"></script>
+
+  <div id="csschoser"></div>
+
+  <!-- link box, main content -->
+    <div id="main">
+        <div id="linkbox">
+          <div>
+            <span class="header">intrinsic</span>
+            <ul type="circle">
+              <li>
+              <a title="about k0s" href="about">about</a>
+              </li>
+              <li><a href="pictures">pictures</a></li>
+              <li><a href="sound">sound</a></li>
+              <li><a href="stories">stories</a></li>
+              <li><a href="poems">poems</a></li>
+              <li><a href="portfolio">portfolio</a></li>
+              <li><a href="comedy" title="*not guaranteed to be funny">Free comedy!</a></li>
+              <li><a href="plants">plants</a></li>
+              <li><a href="hg" title="mercurial repositories">source</a></li>
+            </ul>
+
+            <span class="header">extrinsic</span>
+            <ul type="circle"><a name="extrinsic"></a>
+              <li>
+                <a href="https://k0scist.bandcamp.com/" target="_blank">
+                  bandcamp
+                </a>
+              </li>
+              <li><a href="https://www.youtube.com/channel/UCpz1RRXXDNgI7XroqD0HYQg?feature=watch">youtube</a></li>
+              <li>
+              <a href="http://en.gravatar.com/k0scist"
+              title="import md5; md5.md5('k0scist@gmail.com').hexdigest() # 'a4648ac4d203974259823c1f1630496a'">
+              gravatar
+              </a>
+              </li>
+              <li><a href="https://github.com/k0s">github</a></li>
+              <li><a href="http://writing.com/authors/k0scist">writing.com</a></li>
+              <li><a href="http://k0scist.deviantart.com/">deviant art</a></li>
+<!--              <li><a href="http://jefflee.nudgepad.com/"></a></li> -->
+              <li><a href="http://www.linkedin.com/pub/jeff-hammel/19/aa3/b50">linkedin</a></li>
+              <li><a href="https://about.me/k0s">about.me</a></li>
+            </ul>
+
+            <span class="header">consonance</span>
+            <ul type="circle"><a name="mutual"></a>
+              <li>
+              <a href="http://negativelee.com/">negativelee</a>:
+              random thoughts from my better half and beloved
+              </li>
+            </ul>
+          </div>
+        </div><!-- linkbox -->
+    </div><!-- main -->
+
+    <div id="undermatter" align="left">
+      Comments? Questions? mail <a href="/cdn-cgi/l/email-protection#2e451e5d4d475d5a6e49434f4742004d4143">me</a>
+    </div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

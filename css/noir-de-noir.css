@@ -1,0 +1,28 @@
+* {
+background: black;
+color: black;
+text-shadow: 0 0 0.3em #448;
+}
+
+a {
+color: black;
+text-shadow: 0 0 0.2em #67D;
+}
+
+a:link {
+color: black;
+}
+
+a:hover {
+color: black;
+background-color: black;
+text-shadow: 0 0 0.2em #78F;
+}
+
+a:visited {
+color: black;
+}
+
+li {
+list-style-image: none;
+}
