@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Editor / local agent tooling
+.vscode/
+.cursor/
+
+# Cloudflare edge-injected artifacts (served by CF, not the origin)
+cdn-cgi/
