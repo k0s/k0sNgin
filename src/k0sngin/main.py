@@ -5,11 +5,8 @@ from collections import defaultdict
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from pydantic import BaseModel
-from .parser import parse_config
 from .directory import serve_directory
 from .path import TOP_LEVEL_DIR
 
@@ -17,13 +14,11 @@ HERE = pathlib.Path(__file__).parent
 
 print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
 
-# Determine if we're in production (disable docs)
-PRODUCTION = os.environ.get("K0SNGIN_PRODUCTION", "false").lower() == "true"
-
+# Disable API docs for security
 app = FastAPI(
-    docs_url="/docs" if not PRODUCTION else None,
-    redoc_url="/redoc" if not PRODUCTION else None,
-    openapi_url="/openapi.json" if not PRODUCTION else None,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # Rate limiting middleware
@@ -81,9 +76,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         return response
 
-# Configure rate limiting (default: 60 requests per minute per IP)
-rate_limit = int(os.environ.get("K0SNGIN_RATE_LIMIT", "60"))
-app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
+# Always enable rate limiting (60 requests per minute per IP)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Initialize Jinja2 templates
