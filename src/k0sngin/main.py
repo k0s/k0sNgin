@@ -9,10 +9,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from .directory import serve_directory
 from .path import TOP_LEVEL_DIR
+from .version import COMMIT
 
 HERE = pathlib.Path(__file__).parent
 
 print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
+print(f"K0sNgin commit: {COMMIT}")
 
 # Disable API docs for security
 app = FastAPI(
@@ -64,6 +66,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Identify the build being served (read once at import; see version.py)
+        response.headers["X-K0sNgin-Commit"] = COMMIT
         # Content Security Policy - adjust based on your needs
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
