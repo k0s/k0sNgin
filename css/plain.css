@@ -1,0 +1,76 @@
+a:link {
+    color: #9999FF;
+    text-decoration: none;
+    background: transparent;
+}/*normal links in the text*/
+
+a:visited {
+    color: #5500FF;
+    text-decoration: none;
+    background: transparent;
+}
+
+a:hover { /*this effect is not shown in NN4.xx*/
+    color: #0000FF;
+    text-decoration: none;
+    font-weight: bold;
+    background: white;
+}
+
+a:active {
+    /*colour in NN4.xx is red*/
+    color: #9999CC;
+    text-decoration: underline;
+    background: #FFFFFF;
+}
+
+#linkbox {
+    background-color: #118;
+    border: 2px solid black;
+    opacity: 0.3;
+    width: 80%;
+    opacity:0.3;
+}
+
+#linkbox div {
+    background-color: #000;
+    border: 2px solid green;
+    opacity: 1.0;
+}
+
+#ct ul li {
+list-style-image: url(arrow.png);
+}
+
+
+#firefox * {
+font-style: italic;
+color: gray;
+}
+
+#undermatter * {
+ color: green;
+ opacity: 0.9;
+}
+
+#undermatter img {
+ opacity: 1.0;
+}
+
+.b:link {
+  color: #FF0000;
+  text-decoration: underline;
+  background: transparent;}/*normal links in the text*/
+.b:visited {
+  color: #FFFF00;
+  text-decoration: underline;
+  background: transparent;}
+.b:hover { /*this effect is not shown in NN4.xx*/
+  color: #ff0000;
+  text-decoration: none;
+  font-weight: normal;
+  background: #ffffff;}
+.b:active {/*colour in NN4.xx is red*/
+  color: #ff0000;
+  text-decoration: none;
+  background: #FFFFFF;}

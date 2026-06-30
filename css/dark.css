@@ -1,0 +1,62 @@
+a:link {
+    color: #224477;
+    font-weight: bold;
+    text-decoration: none;
+    background: transparent;
+}
+a:visited {
+    color: #223366;
+    font-weight: bold;
+    text-decoration: none;
+    background: transparent;
+}
+a:hover {
+    color: #5555FF;
+    text-decoration: none;
+    font-weight: bold;
+    background: #000000;
+}
+a:active {
+    color: #9999CC;
+    text-decoration: underline;
+    background: #FFFFFF;
+}
+
+body {
+    background: url(backgrounds/darkstar_back_tiled.jpg) repeat;
+    font-family: Helvetica, sans-serif;
+    color: #aaffff;
+}
+
+.logo {
+    background-image: url(logos/newspiral3.png);
+    width: 510px;
+    height: 510px;
+    position: absolute;
+    top: 0%;
+    left: 50%;
+    margin-left: -255px;
+}
+
+/* This is the transparent box */
+#linkbox {
+    margin: 50px;
+    background-color: #99f;
+    border: 2px solid black;
+    opacity: 0.35;
+}
+
+#linkbox div {
+    padding: 20px;
+    font-weight: bold;
+    color: #000;
+    position: relative;
+    }
+
+#linkbox ul li {
+    list-style-image: url(/css/widgets/lil_globe2.png);
+}
+
+#firefox * {
+    color: gray;
+}
