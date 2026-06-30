@@ -24,12 +24,6 @@ uvicorn k0sngin.main:app --reload
 
 This will start the development server with auto-reload enabled. The application will be available at `http://localhost:8000`.
 
-### API Documentation
-
-Once the server is running, you can access:
-- Interactive API docs (Swagger UI): `http://localhost:8000/docs`
-- Alternative API docs (ReDoc): `http://localhost:8000/redoc`
-
 ## Configuration
 
 The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine which directory to serve files from:
@@ -38,19 +32,11 @@ The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine w
 - If not set, files are served from the current working directory
 - The directory is printed on startup for verification
 
-### Security Configuration
-
-For production deployments, configure these environment variables:
-
-- `K0SNGIN_PRODUCTION=true` - Disables API documentation endpoints (`/docs`, `/redoc`, `/openapi.json`)
-- `K0SNGIN_RATE_LIMIT=60` - Sets rate limit (requests per minute per IP, default: 60)
-- `K0SNGIN_ALLOW_LOCAL_TEMPLATES=false` - Disables rendering of user-controlled HTML files as Jinja2 templates (default: false, recommended for security)
-
-**Security Features:**
+**Security Features (Always Enabled):**
 - Path traversal protection (prevents access to files outside `K0SNGIN_TOP_LEVEL`)
 - Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
-- Rate limiting (configurable per IP)
-- Template injection protection (local templates disabled by default)
+- Rate limiting (60 requests per minute per IP)
+- API documentation endpoints disabled (`/docs`, `/redoc`, `/openapi.json`)
 
 ## Formatters
 
@@ -180,3 +166,41 @@ To debug the container after building:
 ```
 docker run k0sngin sh
 ```
+
+## Site Scanning / Verification
+
+To verify your deployment and ensure only intended files are accessible, you have several options:
+
+### Option 1: Python Scanner (Recommended)
+
+```bash
+# Install requests if needed
+pip install requests
+
+# Scan your site
+python scripts/scan_site.py http://cephalopod.ink
+
+# With rate limit testing
+python scripts/scan_site.py http://cephalopod.ink --test-rate-limit
+```
+
+### Option 2: Shell Script (Simple)
+
+```bash
+# Uses wget and curl (if available)
+./scan_site.sh http://cephalopod.ink
+```
+
+### Option 3: Manual wget
+
+```bash
+# Simple recursive download
+wget --recursive --no-parent --no-host-directories http://cephalopod.ink
+
+# Then inspect the downloaded files
+```
+
+The scanners check:
+- ✅ API docs are disabled (`/docs`, `/redoc`, `/openapi.json`)
+- 📋 Lists all accessible files and endpoints
+- 🚦 Tests rate limiting behavior
