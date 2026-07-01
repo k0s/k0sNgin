@@ -23,4 +23,8 @@ packages = ["src/k0sngin"]
 [dependency-groups]
 dev = [
     "pre-commit>=4.3.0",
+    "pytest>=8.0.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
