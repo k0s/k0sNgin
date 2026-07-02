@@ -2,6 +2,7 @@
 Directory indexer.
 """
 
+import fnmatch
 import pathlib
 from fastapi import Request, HTTPException, Response
 from fastapi.responses import FileResponse
@@ -94,6 +95,30 @@ def collect_cascading_formatters(directory: pathlib.Path) -> dict:
     return formatters
 
 
+def select_visible_names(disk_entries: dict, declared: dict, local_formatters: dict) -> set:
+    """Select which directory entries to list, per the local ``all`` directive.
+
+    - ``all`` absent          -> every entry on disk.
+    - ``all`` empty string     -> only files described in this ``index.ini`` that
+      exist on disk (dangling descriptions are skipped).
+    - ``all`` = comma-separated globs -> entries whose filename matches any glob
+      (``fnmatch``); surrounding whitespace is insignificant.
+
+    ``all`` is **local** to the directory — it is never inherited from parents.
+    See ``docs/formatters.md``.
+    """
+    if "all" not in local_formatters:
+        return set(disk_entries)
+    value = local_formatters["all"].strip()
+    if not value:
+        return {name for name in declared if name in disk_entries}
+    globs = [glob.strip() for glob in value.split(",") if glob.strip()]
+    return {
+        name for name in disk_entries
+        if any(fnmatch.fnmatch(name, glob) for glob in globs)
+    }
+
+
 def serve_directory(requested_path: pathlib.Path, request: Request, templates: Jinja2Templates) -> dict:
     """
     Serve a directory.
@@ -104,21 +129,19 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
         "files": {}
     }
 
-    # Get directory listing
-    files = {}
+    # Raw directory listing: name -> basic metadata.
+    disk_entries = {}
     for item in requested_path.iterdir():
-
         try:
-            # Determine file type
-            type = None
+            item_type = None
             if item.is_file():
-                type = 'file'
+                item_type = 'file'
             elif item.is_dir():
-                type = 'directory'
+                item_type = 'directory'
 
-            files[item.name] = {
+            disk_entries[item.name] = {
                 "name": item.name,
-                "type": type
+                "type": item_type
                 # TODO: created, last modified, size...
             }
         except PermissionError:
@@ -126,29 +149,47 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             # We should log this eventually
             continue
 
-    # Check for index.ini file for metadata (only for current directory)
+    # index.ini for THIS directory: described files + local formatters.
+    declared = {}
+    local_formatters = {}
     index_conf_path = requested_path / "index.ini"
     if index_conf_path.exists():
         try:
             conf_data = parse_index_conf(index_conf_path)
-            template_variables.update(conf_data)
+            declared = conf_data["files"]
+            local_formatters = conf_data["formatters"]
         except Exception:
-            # If parsing fails, fall back to basic directory listing
-            pass
+            # If parsing fails, fall back to a plain listing.
+            declared = {}
+            local_formatters = {}
 
-    # Augment parsed data with directory listing metadata
-    for name, data in files.items():
-        if name not in template_variables['files']:
-            template_variables['files'][name] = data
+    # Which entries are visible (the `all` directive; local, non-cascading).
+    visible = select_visible_names(disk_entries, declared, local_formatters)
+
+    # Build the listing: described entries first (in index.ini order), then any
+    # remaining entries (directory order) — restricted to the visible set.
+    files = {}
+    for name, data in declared.items():
+        if name in visible:
+            entry = dict(data)
+            if name in disk_entries:
+                entry.setdefault("type", disk_entries[name]["type"])
+            files[name] = entry
+    for name, data in disk_entries.items():
+        if name in visible and name not in files:
+            files[name] = data
+    template_variables["files"] = files
 
     # Collect cascading formatters from parent directories
     cascading_formatters = collect_cascading_formatters(requested_path)
 
-    # Apply formatters (cascading formatters override local ones)
-    local_formatters = template_variables.pop("formatters", {})
-    all_formatters = {**cascading_formatters, **local_formatters}
-    if all_formatters:
-        template_variables = apply_formatters(all_formatters, requested_path, request, template_variables)
+    # Apply formatters (cascading formatters override local ones). `all` is
+    # handled above (local listing filter), so strip it out — it is not a
+    # template formatter and must not cascade.
+    merged_formatters = {**cascading_formatters, **local_formatters}
+    merged_formatters.pop("all", None)
+    if merged_formatters:
+        template_variables = apply_formatters(merged_formatters, requested_path, request, template_variables)
 
     # Populate template variables
     # Get the directory path from the request
