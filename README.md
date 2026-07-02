@@ -45,10 +45,17 @@ k0sNgin comes with formatters for the directory indices.
 
 * `css`: a space-separated list of CSS paths to include
 * `title`: title the page and allow addition title/description separation for file
-* `icon`: provide URL for favicon for pages (available )
+* `icon`: provide URL for favicon for pages
+* `all`: control **which files are listed** — absent renders everything, `/all =`
+  (empty) renders only the files described in `index.ini`, and `/all = <globs>`
+  (comma-separated, whitespace-insignificant, e.g. `*.txt, *.png`) renders exactly
+  the entries whose filename matches a glob. Local to the directory (not cascading).
+
+See [`docs/formatters.md`](docs/formatters.md) for the full specification.
+
+Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
 
 ```
-Formatter not found: all
 Formatter not found: ignore
 Formatter not found: include
 Formatter not found: transformer
