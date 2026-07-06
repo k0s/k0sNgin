@@ -44,6 +44,8 @@ k0sNgin comes with formatters for the directory indices.
 
 
 * `css`: a space-separated list of CSS paths to include
+* `links`: alternate-form links — `name = My Resume; [PDF]=resume.pdf` renders
+  extra links after the entry for other forms of the same resource
 * `title`: title the page and allow addition title/description separation for file
 * `icon`: provide URL for favicon for pages
 * `all`: control **which files are listed** — absent renders everything, `/all =`
@@ -60,6 +62,9 @@ Formatter not found: ignore
 Formatter not found: include
 Formatter not found: transformer
 ```
+
+Formatters run in a canonical order (`css`, `links`, `title`, `icon`),
+regardless of their order in `index.ini`.
 
 
 Run `k0s-formatters` for information on the formatters
