@@ -30,9 +30,10 @@
 
     <ul class="file-list">
         {% for file_name, file_info in files.items() %}
+        {% set link_text = file_info.title or file_info.description or file_name %}
         <li class="file-item">
-            <a href="{{ file_name }}" class="file-link">{{ file_name }}</a>
-            {% if file_info.description %}
+            <a href="{{ file_name }}" class="file-link">{{ link_text }}</a>
+            {% if file_info.description and file_info.description != link_text %}
             <div class="file-description">{{ file_info.description }}</div>
             {% endif %}
         </li>
