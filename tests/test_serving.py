@@ -51,12 +51,40 @@ def test_path_traversal_is_blocked(client):
 
 
 def test_directory_index_renders_metadata(client):
-    """A directory renders an index listing its files, using index.ini metadata."""
+    """A directory renders an index listing its files, using index.ini metadata.
+
+    The link text is the per-file title (from the ``name = title : description``
+    split), the link target is the filename, and the description renders
+    separately.
+    """
     r = client.get("/docs/")
     assert r.status_code == 200
-    assert "readme.txt" in r.text          # the file is listed
+    assert 'href="readme.txt"' in r.text   # link target is the filename
+    assert ">the readme</a>" in r.text     # link text is the per-file title
     assert "Docs" in r.text                # /title from index.ini
-    assert "a description" in r.text       # "name : description" split applied
+    assert "a description" in r.text       # split-off description still shown
+
+
+def test_colonless_description_is_link_text(client):
+    """A description without a ``:`` becomes the link text and is not repeated.
+
+    The title formatter must only split descriptions that contain the
+    separator; a plain ``name = description`` line displays the same with
+    and without /title, and the description is not duplicated in a
+    separate description element.
+    """
+    r = client.get("/docs/")
+    assert r.status_code == 200
+    assert 'href="notes.txt"' in r.text
+    assert ">just some notes</a>" in r.text
+    assert r.text.count("just some notes") == 1
+
+
+def test_undescribed_file_falls_back_to_filename(client):
+    """A file with no index.ini description uses its filename as link text."""
+    r = client.get("/")
+    assert r.status_code == 200
+    assert ">hello.txt</a>" in r.text
 
 
 def test_directory_without_trailing_slash_redirects(client):

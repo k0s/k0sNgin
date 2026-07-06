@@ -6,7 +6,13 @@ alongside the plain `name = description` lines, which describe individual files.
 
 Implemented: [`css`](#css), [`title`](#title), [`icon`](#icon), [`all`](#all).
 Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
-`ignore`, `include`, `transformer`.
+`ignore`, `include`, `transformer`, `links`.
+
+> TODO: support decoupage's auxiliary-link description syntax,
+> e.g. `resume.html = My Resume; [PDF]=resume.pdf` — the `; [text]=url`
+> suffix should render extra links next to the entry (the `links`
+> formatter in decoupage). Today the whole string is treated as one
+> opaque description.
 
 Unless noted, `css`/`title`/`icon` **cascade**: a directory inherits them from its
 parents, and a child directory's value overrides the parent's.
@@ -29,7 +35,8 @@ Page title, and per-file title/description splitting.
 
 Sets the page `<title>`/`<h1>`. If a file's description contains a `:` separator,
 it is split into a per-file title and description
-(`name = My Title : the description`).
+(`name = My Title : the description`). A description **without** a `:` is left
+untouched — it renders identically with or without `/title`.
 
 ## `icon`
 

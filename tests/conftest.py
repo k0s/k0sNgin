@@ -31,7 +31,12 @@ _SITE.mkdir()
 _DOCS = _SITE / "docs"
 _DOCS.mkdir()
 (_DOCS / "readme.txt").write_text("readme body\n")
-(_DOCS / "index.ini").write_text("/title = Docs\nreadme.txt = the readme : a description\n")
+(_DOCS / "notes.txt").write_text("notes body\n")
+(_DOCS / "index.ini").write_text(
+    "/title = Docs\n"
+    "readme.txt = the readme : a description\n"
+    "notes.txt = just some notes\n"
+)
 
 # A file OUTSIDE the served root: the traversal target that must stay unreachable
 # even though it exists on disk.

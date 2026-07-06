@@ -104,10 +104,8 @@ class TitleFormatter(Formatter):
                     file_title = file_data.get('name', file_name)
                 file_data['title'] = file_title
                 file_data['description'] = file_description
-            else:
-                # No separator: use description as title, clear description
-                file_data['title'] = description
-                file_data['description'] = None
+            # No separator: leave the description as-is, so a file renders
+            # identically with and without /title.
 
         return result
 
