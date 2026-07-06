@@ -32,10 +32,17 @@ _DOCS = _SITE / "docs"
 _DOCS.mkdir()
 (_DOCS / "readme.txt").write_text("readme body\n")
 (_DOCS / "notes.txt").write_text("notes body\n")
+(_DOCS / "report.html").write_text("<p>report</p>\n")
+(_DOCS / "report.pdf").write_bytes(b"%PDF-1.4 stub\n")
+(_DOCS / "paper.txt").write_text("paper body\n")
+(_DOCS / "paper.pdf").write_bytes(b"%PDF-1.4 stub\n")
 (_DOCS / "index.ini").write_text(
     "/title = Docs\n"
+    "/links =\n"
     "readme.txt = the readme : a description\n"
     "notes.txt = just some notes\n"
+    "report.html = The Report; [PDF]=report.pdf\n"
+    "paper.txt = A Paper : with details; [PDF]=paper.pdf\n"
 )
 
 # A file OUTSIDE the served root: the traversal target that must stay unreachable

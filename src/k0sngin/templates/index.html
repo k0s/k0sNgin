@@ -33,6 +33,7 @@
         {% set link_text = file_info.title or file_info.description or file_name %}
         <li class="file-item">
             <a href="{{ file_name }}" class="file-link">{{ link_text }}</a>
+            {%- if file_info.links %}{% for text, url in file_info.links.items() %} [<a href="{{ url }}" class="file-alt-link">{{ text }}</a>]{% endfor %}{% endif %}
             {% if file_info.description and file_info.description != link_text %}
             <div class="file-description">{{ file_info.description }}</div>
             {% endif %}

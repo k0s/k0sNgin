@@ -80,6 +80,33 @@ def test_colonless_description_is_link_text(client):
     assert r.text.count("just some notes") == 1
 
 
+def test_alternate_form_links(client):
+    """``; [text]=target`` renders extra links to alternate forms of a resource.
+
+    ``report.html = The Report; [PDF]=report.pdf`` shows one entry titled
+    "The Report" linking to report.html, followed by a [PDF] link to
+    report.pdf; the link segment does not leak into the displayed text.
+    """
+    r = client.get("/docs/")
+    assert r.status_code == 200
+    assert ">The Report</a>" in r.text
+    assert '[<a href="report.pdf" class="file-alt-link">PDF</a>]' in r.text
+    assert "[PDF]=report.pdf" not in r.text
+
+
+def test_links_extracted_before_title_split(client):
+    """Link segments are stripped before the title formatter splits on ':'.
+
+    ``paper.txt = A Paper : with details; [PDF]=paper.pdf`` yields title
+    "A Paper", description "with details", and a [PDF] alternate link.
+    """
+    r = client.get("/docs/")
+    assert ">A Paper</a>" in r.text
+    assert "with details" in r.text
+    assert '[<a href="paper.pdf" class="file-alt-link">PDF</a>]' in r.text
+    assert "[PDF]=paper.pdf" not in r.text
+
+
 def test_undescribed_file_falls_back_to_filename(client):
     """A file with no index.ini description uses its filename as link text."""
     r = client.get("/")

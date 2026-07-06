@@ -6,6 +6,7 @@ Formatters for the directory index.
 
 from abc import ABC, abstractmethod
 import pathlib
+import re
 
 from fastapi import Request
 
@@ -50,6 +51,41 @@ class IconFormatter(Formatter):
     def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> str:
         """Format the directory index."""
         return {"icon": value.strip()}
+
+
+class LinksFormatter(Formatter):
+    """Alternate-form links for files in the directory index.
+
+    Description segments of the form ``; [text]=target`` become per-file
+    links and are removed from the description::
+
+        resume.html = My Resume; [PDF]=resume.pdf
+
+    yields ``file_data['links'] == {"PDF": "resume.pdf"}`` with description
+    ``My Resume`` — one conceptual resource, rendered with links to each form.
+    """
+
+    link_re = re.compile(r';\s*\[([^\]]+)\]\s*=\s*(\S+)')
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "links"
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> None:
+        """Format the directory index."""
+        files = variables.get('files', {})
+        for file_data in files.values():
+            description = file_data.get('description')
+            if not description:
+                continue
+            links = dict(self.link_re.findall(description))
+            if not links:
+                continue
+            file_data['links'] = links
+            description = self.link_re.sub('', description).strip()
+            file_data['description'] = description or None
+        return None
 
 
 class TitleFormatter(Formatter):
@@ -109,8 +145,11 @@ class TitleFormatter(Formatter):
 
         return result
 
+# Canonical application order: `links` must extract alternate-form link
+# segments before `title` splits descriptions on ':'.
 all_formatters = [
     CSSFormatter,
+    LinksFormatter,
     TitleFormatter,
     IconFormatter,
 ]
@@ -121,15 +160,19 @@ def apply_formatters(_formatters: dict,
                      directory: pathlib.Path,
                      request: Request,
                      variables: dict):
-    """Apply formatters to the directory index template variables."""
-    for key, value in _formatters.items():
-        formatter = formatters.get(key)
-        if formatter is None:
+    """Apply formatters to the directory index template variables.
+
+    Formatters run in the canonical ``all_formatters`` order, not the order
+    they appear in ``index.ini``.
+    """
+    for key in _formatters:
+        if key not in formatters:
             message = f"Formatter not found: {key}"
             print(message)  # TODO: log this; this is a warning
+    for key, formatter in formatters.items():
+        if key not in _formatters:
             continue
-        formatter = formatter()
-        _variables = formatter.format(value, directory, request, variables)
+        _variables = formatter().format(_formatters[key], directory, request, variables)
         if _variables:
             variables.update(_variables)
     return variables

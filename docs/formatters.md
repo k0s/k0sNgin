@@ -4,15 +4,14 @@ Formatters are `index.ini` **directives** — keys beginning with `/` (e.g.
 `/title`, `/all`) — that control how k0sNgin renders a directory index. They sit
 alongside the plain `name = description` lines, which describe individual files.
 
-Implemented: [`css`](#css), [`title`](#title), [`icon`](#icon), [`all`](#all).
+Implemented: [`css`](#css), [`links`](#links), [`title`](#title), [`icon`](#icon),
+[`all`](#all).
 Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
-`ignore`, `include`, `transformer`, `links`.
+`ignore`, `include`, `transformer`.
 
-> TODO: support decoupage's auxiliary-link description syntax,
-> e.g. `resume.html = My Resume; [PDF]=resume.pdf` — the `; [text]=url`
-> suffix should render extra links next to the entry (the `links`
-> formatter in decoupage). Today the whole string is treated as one
-> opaque description.
+Formatters run in a canonical order (`css`, `links`, `title`, `icon`), not the
+order they appear in `index.ini` — so `links` strips its link segments before
+`title` splits descriptions on `:`.
 
 Unless noted, `css`/`title`/`icon` **cascade**: a directory inherits them from its
 parents, and a child directory's value overrides the parent's.
@@ -24,6 +23,22 @@ Space-separated list of stylesheet paths to include in the page `<head>`.
 ```
 /css = /css/professional.css /portfolio/style.css
 ```
+
+## `links`
+
+Alternate-form links: description segments of the form `; [text]=target` become
+extra links rendered after the entry's main link, for other forms of the same
+conceptual resource.
+
+```
+/links =
+resume.html = My Resume; [PDF]=resume.pdf
+```
+
+renders as **My Resume** (linking to `resume.html`) followed by
+**[PDF]** (linking to `resume.pdf`). The segments are stripped from the
+displayed description. Internally each file gets a `links` dict of
+`{text: target}`, e.g. `{"PDF": "resume.pdf"}`.
 
 ## `title`
 
