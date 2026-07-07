@@ -11,6 +11,8 @@ import re
 
 from fastapi import Request
 
+from .path import TOP_LEVEL_DIR
+
 
 class Formatter(ABC):
     """ABC: Formatter for the directory index."""
@@ -122,6 +124,54 @@ class LinksFormatter(Formatter):
             file_data['links'] = links
             description = self.link_re.sub('', description).strip()
             file_data['description'] = description or None
+        return None
+
+
+class IncludeFormatter(Formatter):
+    """Include an HTML fragment at the top of the page body.
+
+    ``/include = site-nav.html`` inserts the named file's contents verbatim
+    (raw HTML) above the page's navigation and listing. Cascades, so a
+    site-wide header set at the root applies everywhere.
+
+    The file is resolved by walking up from the rendered directory to the
+    served root, first hit wins — a subtree can override an ancestor's
+    fragment by shipping its own copy. Only relative paths within the served
+    tree are allowed; a fragment that can't be found or read is skipped
+    (logged), never an error.
+    """
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "include"
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> dict:
+        """Format the directory index."""
+        value = value.strip()
+        relative = pathlib.PurePosixPath(value)
+        if not value or relative.is_absolute() or '..' in relative.parts:
+            return None
+
+        current = directory
+        while True:
+            try:
+                current.relative_to(TOP_LEVEL_DIR)
+            except ValueError:
+                break  # walked above the served root
+            candidate = current / value
+            if candidate.is_file():
+                try:
+                    candidate.resolve().relative_to(TOP_LEVEL_DIR)
+                    return {"include_html": candidate.read_text(encoding="utf-8")}
+                except (ValueError, OSError, UnicodeDecodeError):
+                    break  # escapes the tree (symlink) or unreadable
+            if current == TOP_LEVEL_DIR:
+                break
+            current = current.parent
+
+        message = f"Include not found: {value}"
+        print(message)  # TODO: log this; this is a warning
         return None
 
 
@@ -286,6 +336,7 @@ all_formatters = [
     ImagesFormatter,
     IconFormatter,
     BreadcrumbsFormatter,
+    IncludeFormatter,
 ]
 
 formatters = {formatter.key(): formatter for formatter in all_formatters}
