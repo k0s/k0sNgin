@@ -213,6 +213,13 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     else:
         template_variables["directory_name"] = path_info.rstrip("/") + "/"
 
+    # Every page except the root links to the directory index above it
+    # (rendered by base.html; superseded by /breadcrumbs when enabled).
+    if path_info == "/":
+        template_variables["parent_url"] = None
+    else:
+        template_variables["parent_url"] = path_info.rstrip("/").rsplit("/", 1)[0] + "/"
+
     template_variables["request"] = request
 
     # Explicit /template (local-only): select a built-in template by name.
