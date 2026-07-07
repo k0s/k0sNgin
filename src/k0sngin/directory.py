@@ -13,6 +13,13 @@ from .formatter import apply_formatters
 from .parser import parse_config
 from .path import TOP_LEVEL_DIR
 
+# Built-in page templates (also passed to serve_directory as `templates`).
+TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
+
+# Directives that apply only to the directory whose index.ini declares them —
+# they are never inherited by subdirectories. See docs/formatters.md.
+LOCAL_ONLY_FORMATTERS = {"all", "images", "template"}
+
 
 class DirectoryIndexer:
     """Directory indexer."""
@@ -79,8 +86,13 @@ def collect_cascading_formatters(directory: pathlib.Path) -> dict:
         if index_conf_path.exists():
             try:
                 conf_data = parse_index_conf(index_conf_path)
-                # Child formatters override parent formatters
-                formatters.update(conf_data["formatters"])
+                # Child formatters override parent formatters.
+                # Local-only directives never cascade.
+                formatters.update({
+                    key: value
+                    for key, value in conf_data["formatters"].items()
+                    if key not in LOCAL_ONLY_FORMATTERS
+                })
             except Exception:
                 # If parsing fails, continue to parent directory
                 pass
@@ -183,11 +195,12 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     # Collect cascading formatters from parent directories
     cascading_formatters = collect_cascading_formatters(requested_path)
 
-    # Apply formatters (cascading formatters override local ones). `all` is
-    # handled above (local listing filter), so strip it out — it is not a
-    # template formatter and must not cascade.
+    # Apply formatters (local formatters override cascading ones). `all` and
+    # `template` are handled directly in this function — they control the
+    # listing and the renderer, not template variables — so strip them out.
     merged_formatters = {**cascading_formatters, **local_formatters}
     merged_formatters.pop("all", None)
+    merged_formatters.pop("template", None)
     if merged_formatters:
         template_variables = apply_formatters(merged_formatters, requested_path, request, template_variables)
 
@@ -201,6 +214,18 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
         template_variables["directory_name"] = path_info.rstrip("/") + "/"
 
     template_variables["request"] = request
+
+    # Explicit /template (local-only): select a built-in template by name.
+    # It takes precedence over a local index.html file (as in decoupage).
+    # Only bare filenames that exist in the built-in templates directory are
+    # accepted — /template never loads templates from the content tree.
+    requested_template = local_formatters.get("template", "").strip()
+    if requested_template:
+        if (requested_template == pathlib.PurePosixPath(requested_template).name
+                and (TEMPLATES_DIR / requested_template).is_file()):
+            return templates.TemplateResponse(requested_template, template_variables)
+        message = f"Template not found: {requested_template}"
+        print(message)  # TODO: log this; this is a warning
 
     # Check for local template override
     template_name = "index.html"  # TODO: make this configurable

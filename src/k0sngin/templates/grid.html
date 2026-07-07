@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_gallery.html" import image_tag %}
+{% block head %}
+    <style>
+      .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat({{ columns or 1 }}, auto);
+        gap: 1em;
+        justify-content: center;
+        text-align: center;
+      }
+    </style>
+{% endblock %}
+{% block body %}
+    <div class="gallery gallery-grid">
+        {% for name, image in files.items() %}
+        <div class="image" id="{{ name }}">
+            <a href="{{ image.link }}">{{ image_tag(image, width, height) }}</a>
+            <br>
+            {{ image.title or image.description or '' }}
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}

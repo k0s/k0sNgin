@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_gallery.html" import image_tag %}
+{% block head %}
+    {% set images = files.values()|list %}
+    {% set selected = request.query_params.get('image') %}
+    {% if selected not in files %}{% set selected = images[0].name if images else '' %}{% endif %}
+    <style>
+      body {
+        background-image: url('{{ selected }}');
+        background-repeat: no-repeat;
+        background-position: right;
+        background-attachment: fixed;
+        background-size: 100% 100%;
+      }
+      .gallery-background .image { display: inline-block; margin: 1em; text-align: center; }
+    </style>
+{% endblock %}
+{% block body %}
+    <div class="gallery gallery-background">
+        {% for name, image in files.items() %}
+        <div class="image" id="{{ name }}">
+            <a href="?image={{ name }}#{{ name }}">{{ image_tag(image, width, height) }}</a>
+            <br>
+            {{ image.title or image.description or '' }}
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}

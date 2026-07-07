@@ -5,6 +5,7 @@ Formatters for the directory index.
 # TODO: cascading formatters. They will need to know about their parent.
 
 from abc import ABC, abstractmethod
+import mimetypes
 import pathlib
 import re
 
@@ -88,6 +89,100 @@ class LinksFormatter(Formatter):
         return None
 
 
+class ImagesFormatter(Formatter):
+    """Image gallery: restrict the listing to images and size them for display.
+
+    Ported from montage (the decoupage photogallery extension). The value is a
+    comma-separated argument string of bare flags and key=value pairs::
+
+        /images = thumbnails, size=150x, columns=4
+
+    - ``size=WxH``: display size for ``<img>``; either dimension may be empty
+      (``400x``, ``x550``).
+    - ``columns``: grid columns (defaults to the number of images).
+    - ``thumbnails`` (flag): point ``src`` at ``<thumb_dir>/<thumb_prefix><name>``
+      when that file already exists. Thumbnails are never generated in the
+      request path — see docs/formatters.md.
+    - ``thumb_dir`` (default ``thumbs``), ``thumb_prefix`` (default ``thumb_``).
+
+    Non-image entries (by ``mimetypes.guess_type`` on the name — this includes
+    subdirectories) are dropped from the listing. Each surviving entry gets
+    ``link`` (the full image) and ``src`` (what ``<img>`` should load).
+    """
+
+    defaults = {"thumb_dir": "thumbs", "thumb_prefix": "thumb_"}
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "images"
+
+    @staticmethod
+    def parse_args(value: str) -> tuple[list, dict]:
+        """Parse a montage-style argument string into (flags, kwargs)."""
+        flags = []
+        kwargs = {}
+        for token in value.split(','):
+            token = token.strip()
+            if not token:
+                continue
+            if '=' in token:
+                key, _, val = token.partition('=')
+                kwargs[key.strip()] = val.strip()
+            else:
+                flags.append(token)
+        return flags, kwargs
+
+    @staticmethod
+    def parse_size(size: str) -> tuple:
+        """Parse ``WxH`` (either side optional) into (width, height)."""
+        if not size or 'x' not in size:
+            return None, None
+        try:
+            width, height = [int(i) if i.strip() else None
+                             for i in size.split('x', 1)]
+        except ValueError:
+            return None, None
+        return width, height
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> dict:
+        """Format the directory index."""
+        flags, kwargs = self.parse_args(value)
+        width, height = self.parse_size(kwargs.get('size', ''))
+        thumb_dir = kwargs.get('thumb_dir') or self.defaults['thumb_dir']
+        thumb_prefix = kwargs.get('thumb_prefix') or self.defaults['thumb_prefix']
+        # thumbnails must live under the served directory
+        use_thumbnails = ('thumbnails' in flags
+                          and not pathlib.PurePosixPath(thumb_dir).is_absolute()
+                          and '..' not in pathlib.PurePosixPath(thumb_dir).parts)
+
+        images = {}
+        for name, data in variables.get('files', {}).items():
+            mimetype = mimetypes.guess_type(name)[0]
+            if not (mimetype and mimetype.startswith('image/')):
+                continue
+            data['link'] = name
+            data['src'] = name
+            if use_thumbnails:
+                thumbnail = f"{thumb_prefix}{name}"
+                if (directory / thumb_dir / thumbnail).is_file():
+                    data['src'] = f"{thumb_dir}/{thumbnail}"
+            images[name] = data
+
+        try:
+            columns = int(kwargs['columns'])
+        except (KeyError, ValueError):
+            columns = len(images)
+
+        return {
+            "files": images,
+            "width": width,
+            "height": height,
+            "columns": max(columns, 1),
+            "images": True,
+        }
+
+
 class TitleFormatter(Formatter):
     """Title for the directory index.
     Splits a description into a title and a description via a separator in
@@ -146,11 +241,13 @@ class TitleFormatter(Formatter):
         return result
 
 # Canonical application order: `links` must extract alternate-form link
-# segments before `title` splits descriptions on ':'.
+# segments before `title` splits descriptions on ':'; `images` filters the
+# listing after titles/descriptions are settled.
 all_formatters = [
     CSSFormatter,
     LinksFormatter,
     TitleFormatter,
+    ImagesFormatter,
     IconFormatter,
 ]
 
