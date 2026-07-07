@@ -25,6 +25,42 @@ class Formatter(ABC):
         """Format the directory index."""
 
 
+class BreadcrumbsFormatter(Formatter):
+    """Full breadcrumb trail for the directory index.
+
+    ``/breadcrumbs`` (empty value) renders a linked trail of ancestor
+    directories above the page instead of the default parent-only link::
+
+        / » pictures » gallery
+
+    Cascades: enabling it on a directory enables it for all descendants;
+    a descendant may opt back out with ``/breadcrumbs = off``. The root
+    itself shows no trail (nothing above it).
+    """
+
+    off_values = {"off", "false", "no"}
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "breadcrumbs"
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> dict:
+        """Format the directory index."""
+        if value.strip().lower() in self.off_values:
+            return None
+        path = request.scope.get("path", "/")
+        segments = [segment for segment in path.split("/") if segment]
+        if not segments:
+            return None  # the root has nothing above it
+        crumbs = [{"name": "/", "url": "/"}]
+        url = ""
+        for segment in segments:
+            url += f"/{segment}"
+            crumbs.append({"name": segment, "url": url + "/"})
+        return {"breadcrumbs": crumbs}
+
+
 class CSSFormatter(Formatter):
     """Space-separated list of CSS paths to include in the directory index."""
 
@@ -249,6 +285,7 @@ all_formatters = [
     TitleFormatter,
     ImagesFormatter,
     IconFormatter,
+    BreadcrumbsFormatter,
 ]
 
 formatters = {formatter.key(): formatter for formatter in all_formatters}

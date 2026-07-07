@@ -22,6 +22,15 @@
     {% block head %}{% endblock %}
 </head>
 <body>
+{% if breadcrumbs %}
+<nav class="breadcrumbs">
+    {%- for crumb in breadcrumbs %}
+    {%- if not loop.first %} » {% endif %}
+    {%- if loop.last %}{{ crumb.name }}{% else %}<a href="{{ crumb.url }}">{{ crumb.name }}</a>{% endif %}
+    {%- endfor %}</nav>
+{% elif parent_url %}
+<nav class="parent-nav"><a href="{{ parent_url }}">../</a></nav>
+{% endif %}
 {% block body %}{% endblock %}
 </body>
 </html>

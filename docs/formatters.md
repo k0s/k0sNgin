@@ -5,17 +5,18 @@ Formatters are `index.ini` **directives** — keys beginning with `/` (e.g.
 alongside the plain `name = description` lines, which describe individual files.
 
 Implemented: [`css`](#css), [`links`](#links), [`title`](#title), [`icon`](#icon),
-[`all`](#all), [`images`](#images), [`template`](#template).
+[`all`](#all), [`images`](#images), [`template`](#template),
+[`breadcrumbs`](#breadcrumbs).
 Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
 `ignore`, `include`, `transformer`, `sort`, `formatters`.
 
-Formatters run in a canonical order (`css`, `links`, `title`, `images`, `icon`),
-not the order they appear in `index.ini` — so `links` strips its link segments
-before `title` splits descriptions on `:`, and `images` filters the listing after
-titles/descriptions are settled.
+Formatters run in a canonical order (`css`, `links`, `title`, `images`, `icon`,
+`breadcrumbs`), not the order they appear in `index.ini` — so `links` strips its
+link segments before `title` splits descriptions on `:`, and `images` filters the
+listing after titles/descriptions are settled.
 
-Unless noted, `css`/`title`/`icon` **cascade**: a directory inherits them from its
-parents, and a child directory's value overrides the parent's.
+Unless noted, `css`/`title`/`icon`/`breadcrumbs` **cascade**: a directory inherits
+them from its parents, and a child directory's value overrides the parent's.
 `all`/`images`/`template` are **local-only**: they apply only to the directory
 whose `index.ini` declares them and are never inherited by subdirectories.
 
@@ -155,3 +156,25 @@ the default `index.html` template. Only bare filenames that exist in the
 built-in templates directory are accepted — values containing path separators
 or `..` are rejected (logged, fall back to default); `/template` never loads
 templates from the content tree.
+
+## `breadcrumbs`
+
+Full breadcrumb trail. Every directory index except the root already shows a
+**parent link** (`../`, a `.parent-nav` line above the page — built-in template
+behavior, not a formatter); `/breadcrumbs` upgrades it to a linked trail of all
+ancestors, with the current directory shown unlinked:
+
+```
+/breadcrumbs =
+```
+
+renders (at `/pictures/gallery/`):
+
+```
+/ » pictures » gallery
+```
+
+Cascades: enabling it on a directory enables it for all descendants. A
+descendant opts back out with `/breadcrumbs = off` (also `false`/`no`), which
+restores the plain parent link. The root shows neither (nothing above it).
+Style hooks: `nav.breadcrumbs` and `nav.parent-nav`.
