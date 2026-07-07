@@ -6,17 +6,18 @@ alongside the plain `name = description` lines, which describe individual files.
 
 Implemented: [`css`](#css), [`links`](#links), [`title`](#title), [`icon`](#icon),
 [`all`](#all), [`images`](#images), [`template`](#template),
-[`breadcrumbs`](#breadcrumbs).
+[`breadcrumbs`](#breadcrumbs), [`include`](#include).
 Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
-`ignore`, `include`, `transformer`, `sort`, `formatters`.
+`ignore`, `transformer`, `sort`, `formatters`.
 
 Formatters run in a canonical order (`css`, `links`, `title`, `images`, `icon`,
-`breadcrumbs`), not the order they appear in `index.ini` — so `links` strips its
-link segments before `title` splits descriptions on `:`, and `images` filters the
-listing after titles/descriptions are settled.
+`breadcrumbs`, `include`), not the order they appear in `index.ini` — so `links`
+strips its link segments before `title` splits descriptions on `:`, and `images`
+filters the listing after titles/descriptions are settled.
 
-Unless noted, `css`/`title`/`icon`/`breadcrumbs` **cascade**: a directory inherits
-them from its parents, and a child directory's value overrides the parent's.
+Unless noted, `css`/`title`/`icon`/`breadcrumbs`/`include` **cascade**: a directory
+inherits them from its parents, and a child directory's value overrides the
+parent's.
 `all`/`images`/`template` are **local-only**: they apply only to the directory
 whose `index.ini` declares them and are never inherited by subdirectories.
 
@@ -178,3 +179,24 @@ Cascades: enabling it on a directory enables it for all descendants. A
 descendant opts back out with `/breadcrumbs = off` (also `false`/`no`), which
 restores the plain parent link. The root shows neither (nothing above it).
 Style hooks: `nav.breadcrumbs` and `nav.parent-nav`.
+
+## `include`
+
+Insert an HTML fragment verbatim at the top of the page body (above the
+parent-nav/breadcrumbs line and the listing) — the classic use is a site-wide
+navigation header:
+
+```
+/include = site-nav.html
+```
+
+Cascades, so setting it at the site root applies it to every directory index.
+The fragment is resolved by **walking up from the rendered directory to the
+served root** — first hit wins, so a subtree can override an ancestor's
+fragment by shipping its own copy of the file. Only relative paths inside the
+served tree are allowed (no absolute paths, no `..`; fragments live in the
+content tree and are therefore also fetchable as normal files). A fragment
+that can't be found or read is skipped and logged, never an error.
+
+The contents are inserted **raw** (no escaping, not rendered as a template),
+into the `include_html` template variable consumed by `base.html`.
