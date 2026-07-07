@@ -1,0 +1,4 @@
+{# Shared macro for gallery templates (strip/grid/sequence/background). #}
+{% macro image_tag(image, width, height) -%}
+<img src="{{ image.src }}"{% if width %} width="{{ width }}"{% endif %}{% if height %} height="{{ height }}"{% endif %} alt="{{ image.title or image.description or image.name }}">
+{%- endmacro %}

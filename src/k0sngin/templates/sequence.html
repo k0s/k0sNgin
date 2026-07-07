@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_gallery.html" import image_tag %}
+{% block head %}
+    <style>
+      .gallery-sequence { text-align: center; }
+      .gallery-sequence .spacer { display: inline-block; width: 3em; }
+    </style>
+{% endblock %}
+{% block body %}
+    {% set images = files.values()|list %}
+    {% set index = request.query_params.get('index', 0)|int %}
+    {% if images and index >= 0 and index < images|length %}
+    {% set image = images[index] %}
+    <div class="gallery gallery-sequence">
+        <div class="image" id="{{ image.name }}">
+            <a href="{{ image.link }}">{{ image_tag(image, width, height) }}</a>
+            {% if image.title %}<p><i>{{ image.title }}</i></p>{% endif %}
+            {% if image.description %}<p>{{ image.description }}</p>{% endif %}
+        </div>
+        <p>
+            {% if index > 0 %}{% set prev = images[index - 1] %}<a href="?index={{ index - 1 }}" class="prev">{{ prev.title or prev.description or '««' }}</a>{% endif %}
+            <span class="spacer"></span>
+            {% if index + 1 < images|length %}{% set next = images[index + 1] %}<a href="?index={{ index + 1 }}" class="next">{{ next.title or next.description or '»»' }}</a>{% endif %}
+        </p>
+    </div>
+    {% endif %}
+{% endblock %}

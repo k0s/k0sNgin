@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_gallery.html" import image_tag %}
+{% block head %}
+    <style>
+      .gallery-strip { text-align: center; }
+      .gallery-strip .image { margin: 1em auto; }
+    </style>
+{% endblock %}
+{% block body %}
+    <div class="gallery gallery-strip">
+        {% for name, image in files.items() %}
+        <div class="image" id="{{ name }}">
+            <a href="{{ image.link }}">{{ image_tag(image, width, height) }}</a>
+            <br>
+            {{ image.title or image.description or '' }}
+        </div>
+        {% if not loop.last %}<hr{% if width %} style="width: {{ width }}px"{% endif %}>{% endif %}
+        {% endfor %}
+    </div>
+{% endblock %}
