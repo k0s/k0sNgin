@@ -251,7 +251,11 @@ class ImagesFormatter(Formatter):
             data['src'] = name
             if use_thumbnails:
                 thumbnail = f"{thumb_prefix}{name}"
-                if (directory / thumb_dir / thumbnail).is_file():
+                thumbnail_file = directory / thumb_dir / thumbnail
+                # Zero-byte thumbnails count as missing: montage's old
+                # generator left empty files behind on failed writes, which
+                # serve as 200s but render as broken tiles.
+                if thumbnail_file.is_file() and thumbnail_file.stat().st_size > 0:
                     data['src'] = f"{thumb_dir}/{thumbnail}"
             images[name] = data
 

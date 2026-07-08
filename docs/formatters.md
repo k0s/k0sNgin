@@ -141,7 +141,7 @@ pairs:
 |----------|---------|
 | `size=WxH` | Display size for `<img>` (`width`/`height` attributes). Either side may be empty: `400x`, `x550`, `160x160`. |
 | `columns=N` | Grid columns for `grid.html`. Default: the number of images (one row). |
-| `thumbnails` (flag) | Point `<img>` at `<thumb_dir>/<thumb_prefix><name>` **when that file already exists on disk**; the image's link still targets the full file. Missing thumbnails fall back to the full image. |
+| `thumbnails` (flag) | Point `<img>` at `<thumb_dir>/<thumb_prefix><name>` **when that file already exists on disk (non-empty)**; the image's link still targets the full file. Missing thumbnails fall back to the full image. |
 | `thumb_dir=…` | Thumbnail subdirectory (default `thumbs`). Must stay under the directory (no absolute paths, no `..`). |
 | `thumb_prefix=…` | Thumbnail filename prefix (default `thumb_`). |
 

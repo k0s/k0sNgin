@@ -112,6 +112,21 @@ def test_thumbnails_use_existing(client, site_root):
     assert not (thumbs / "thumb_b.jpg").exists()
 
 
+def test_empty_thumbnail_counts_as_missing(client, site_root):
+    """A zero-byte thumbnail (montage's old failed-write leftovers) is
+    skipped in favor of the full image — it would serve 200 but render as a
+    broken tile."""
+    d = _make_gallery(site_root, "img_empty_thumb",
+                      ["a.jpg"],
+                      ini="/images = thumbnails, size=150x\n/template = strip.html\n")
+    thumbs = d / "thumbs"
+    thumbs.mkdir()
+    (thumbs / "thumb_a.jpg").write_bytes(b"")
+    html = client.get("/img_empty_thumb/").text
+    assert 'src="a.jpg"' in html
+    assert 'src="thumbs/thumb_a.jpg"' not in html
+
+
 def test_images_is_local_only(client, site_root):
     """A parent's /images (and /template) do not cascade into children."""
     d = _make_gallery(site_root, "img_local",
