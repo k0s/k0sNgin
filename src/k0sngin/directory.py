@@ -245,11 +245,16 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     # It takes precedence over a local index.html file (as in decoupage).
     # Only bare filenames that exist in the built-in templates directory are
     # accepted — /template never loads templates from the content tree.
+    # Directory indexes are dynamic (index.ini edits must show immediately):
+    # allow caches to store but always revalidate.
+    index_headers = {"Cache-Control": "no-cache"}
+
     requested_template = local_formatters.get("template", "").strip()
     if requested_template:
         if (requested_template == pathlib.PurePosixPath(requested_template).name
                 and (TEMPLATES_DIR / requested_template).is_file()):
-            return templates.TemplateResponse(requested_template, template_variables)
+            return templates.TemplateResponse(requested_template, template_variables,
+                                              headers=index_headers)
         message = f"Template not found: {requested_template}"
         print(message)  # TODO: log this; this is a warning
 
@@ -265,15 +270,18 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             # File is not UTF-8, serve it as-is instead of as a template
             return FileResponse(
                 path=str(local_template_path),
-                media_type="text/html"
+                media_type="text/html",
+                headers=index_headers,
             )
 
         # File is UTF-8, use it as a template
         env = Environment(loader=FileSystemLoader(str(requested_path)))
         template = env.get_template("index.html")
         html_content = template.render(**template_variables)
-        return Response(content=html_content, media_type="text/html")
+        return Response(content=html_content, media_type="text/html",
+                        headers=index_headers)
     else:
         # Use default template
         # TODO: reconcile with the local template path mechanism above
-        return templates.TemplateResponse(template_name, template_variables)
+        return templates.TemplateResponse(template_name, template_variables,
+                                          headers=index_headers)

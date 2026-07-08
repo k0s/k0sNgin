@@ -1,7 +1,10 @@
+import hashlib
+import mimetypes
 import os
 import pathlib
 import time
 from collections import defaultdict
+from email.utils import formatdate, parsedate_to_datetime
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -12,6 +15,50 @@ from .path import TOP_LEVEL_DIR
 from .version import COMMIT
 
 HERE = pathlib.Path(__file__).parent
+
+# Cache policy: media/static files may be cached this long (seconds) by
+# browsers and the Cloudflare edge; everything else (HTML, text) must
+# revalidate every time (`no-cache`), which the 304 handling below makes
+# cheap. Trade-off: an in-place media edit can stay stale up to this long
+# unless the edge is purged.
+MEDIA_MAX_AGE = int(os.environ.get("K0SNGIN_MEDIA_MAX_AGE", str(24 * 60 * 60)))
+MEDIA_CACHE_TYPES = ("image/", "audio/", "video/", "font/",
+                     "text/css", "application/javascript", "text/javascript")
+
+
+def cache_control_for(media_type) -> str:
+    """Cache-Control policy for a response content type."""
+    if media_type and media_type.startswith(MEDIA_CACHE_TYPES):
+        return f"public, max-age={MEDIA_MAX_AGE}"
+    return "no-cache"
+
+
+def file_etag(stat_result) -> str:
+    """ETag for a file — Starlette's FileResponse formula, reproduced so the
+    etags we validate against are the same ones FileResponse has been
+    handing out."""
+    etag_base = f"{stat_result.st_mtime}-{stat_result.st_size}"
+    return f'"{hashlib.md5(etag_base.encode(), usedforsecurity=False).hexdigest()}"'
+
+
+def client_cache_is_fresh(request: Request, etag: str, mtime: float) -> bool:
+    """True if the client's conditional headers show it already has the file.
+
+    ``If-None-Match`` wins over ``If-Modified-Since`` (RFC 9110 §13.1.3).
+    """
+    if_none_match = request.headers.get("if-none-match")
+    if if_none_match:
+        tokens = {token.strip().removeprefix("W/")
+                  for token in if_none_match.split(",")}
+        return "*" in tokens or etag in tokens
+    if_modified_since = request.headers.get("if-modified-since")
+    if if_modified_since:
+        try:
+            since = parsedate_to_datetime(if_modified_since)
+        except (TypeError, ValueError):
+            return False
+        return int(mtime) <= since.timestamp()
+    return False
 
 print(f"K0sNgin serving files from: {TOP_LEVEL_DIR}")
 print(f"K0sNgin commit: {COMMIT}")
@@ -90,7 +137,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 templates = Jinja2Templates(directory=HERE / "templates")
 
 
-@app.get("/{file_path:path}")
+@app.api_route("/{file_path:path}", methods=["GET", "HEAD"])
 async def serve_file(file_path: str, request: Request):
     """
     Serve files from the K0SNGIN_TOP_LEVEL directory.
@@ -131,14 +178,27 @@ async def serve_file(file_path: str, request: Request):
             return RedirectResponse(url=f"/{file_path}/", status_code=301)
         return serve_directory(requested_path, request, templates)
 
+    # Conditional requests: answer 304 when the client's cache is current.
+    stat_result = requested_path.stat()
+    etag = file_etag(stat_result)
+    media_type = mimetypes.guess_type(requested_path.name)[0]
+    cache_control = cache_control_for(media_type)
+    if client_cache_is_fresh(request, etag, stat_result.st_mtime):
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={
+            "etag": etag,
+            "cache-control": cache_control,
+            "last-modified": formatdate(stat_result.st_mtime, usegmt=True),
+        })
+
     # Serve the file with inline disposition
     file_response = FileResponse(
         path=str(requested_path),
         filename=requested_path.name,
-        media_type=None  # Let FastAPI determine the media type
+        media_type=media_type,
     )
 
     # Override the Content-Disposition header to display inline
     file_response.headers["Content-Disposition"] = f"inline; filename=\"{requested_path.name}\""
+    file_response.headers["Cache-Control"] = cache_control
 
     return file_response
