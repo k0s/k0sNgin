@@ -4,13 +4,10 @@ Covers the two highest-risk paths for a public fileserver — the path-traversal
 guard and directory-index rendering — plus the file-serving contract and the
 security/rate-limit middleware. Each test states the behavior it pins.
 
-Rate-limit isolation: the limiter keys on the first ``X-Forwarded-For`` value
-(``main.py``), so tests that could exhaust a bucket send a unique ``X-Forwarded-For``
-to get their own counter and avoid interfering with each other.
+Rate-limit isolation: conftest raises the shared app's limit (via
+``K0SNGIN_RATE_LIMIT``) so the growing suite never trips it; the 429 behavior
+is pinned against a dedicated app instance with a tiny limit instead.
 """
-
-# Keep in sync with the value passed to RateLimitMiddleware in k0sngin/main.py.
-RATE_LIMIT_PER_MINUTE = 60
 
 
 def test_serves_file_inline(client):
@@ -128,11 +125,22 @@ def test_root_directory_is_served(client):
     assert "hello.txt" in r.text
 
 
-def test_rate_limit_returns_429_when_exceeded(client):
+def test_rate_limit_returns_429_when_exceeded():
     """Exceeding the per-IP limit within a minute yields 429 with Retry-After."""
-    headers = {"x-forwarded-for": "203.0.113.7"}  # dedicated bucket for this test
-    for _ in range(RATE_LIMIT_PER_MINUTE):
-        assert client.get("/hello.txt", headers=headers).status_code == 200
-    blocked = client.get("/hello.txt", headers=headers)
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from k0sngin.main import RateLimitMiddleware
+
+    app = FastAPI()
+
+    @app.get("/ping")
+    async def ping():
+        return {"ok": True}
+
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=3)
+    limited = TestClient(app)
+    for _ in range(3):
+        assert limited.get("/ping").status_code == 200
+    blocked = limited.get("/ping")
     assert blocked.status_code == 429
     assert blocked.headers.get("retry-after")

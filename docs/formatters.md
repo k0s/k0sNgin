@@ -5,19 +5,19 @@ Formatters are `index.ini` **directives** — keys beginning with `/` (e.g.
 alongside the plain `name = description` lines, which describe individual files.
 
 Implemented: [`css`](#css), [`links`](#links), [`title`](#title), [`icon`](#icon),
-[`all`](#all), [`images`](#images), [`template`](#template),
+[`all`](#all), [`ignore`](#ignore), [`images`](#images), [`template`](#template),
 [`breadcrumbs`](#breadcrumbs), [`include`](#include).
 Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
-`ignore`, `transformer`, `sort`, `formatters`.
+`transformer`, `sort`, `formatters`.
 
 Formatters run in a canonical order (`css`, `links`, `title`, `images`, `icon`,
 `breadcrumbs`, `include`), not the order they appear in `index.ini` — so `links`
 strips its link segments before `title` splits descriptions on `:`, and `images`
 filters the listing after titles/descriptions are settled.
 
-Unless noted, `css`/`title`/`icon`/`breadcrumbs`/`include` **cascade**: a directory
-inherits them from its parents, and a child directory's value overrides the
-parent's.
+Unless noted, `css`/`title`/`icon`/`breadcrumbs`/`include`/`ignore` **cascade**: a
+directory inherits them from its parents, and a child directory's value overrides
+the parent's.
 `all`/`images`/`template` are **local-only**: they apply only to the directory
 whose `index.ini` declares them and are never inherited by subdirectories.
 
@@ -99,6 +99,27 @@ Examples (given a directory whose `index.ini` describes `resume.html` and
 /all = *.pdf      # -> 2002-MSThesisHammel.pdf, resume.pdf (only pdfs)
 /all = *.pdf, *.txt   # -> 2002-MSThesisHammel.pdf, resume.pdf, notes.txt
 ```
+
+## `ignore`
+
+Hide entries from the directory listing. The value is a comma-separated glob
+list — the **same syntax and parsing as `/all`** (shared code) — naming entries
+to hide:
+
+```
+/ignore = index.ini, .*, index.html
+```
+
+- Processed **after** `/all`: `/all` selects the displayed set, `/ignore`
+  subtracts from it.
+- **Cascades** (unlike `/all`): a parent's globs apply to all descendants; a
+  descendant's own `/ignore` overrides wholesale, and a bare `/ignore =`
+  clears the inherited globs.
+- Listing-only: ignored files are hidden from the index but remain directly
+  fetchable by URL (as in decoupage).
+- Note: decoupage's `/ignore` was space-separated; k0sNgin's is
+  comma-separated for consistency with `/all` (site content updated
+  2026-07-08).
 
 ## `images`
 

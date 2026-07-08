@@ -50,6 +50,9 @@ _DOCS.mkdir()
 (_TMP_ROOT / "secret.txt").write_text("TOP SECRET\n")
 
 os.environ["K0SNGIN_TOP_LEVEL"] = str(_SITE)
+# The whole suite runs against one app instance from one client IP; keep the
+# rate limiter (60/min default) from 429-ing the later tests.
+os.environ["K0SNGIN_RATE_LIMIT"] = "100000"
 
 # Safe to import the app now that the env is set.
 from fastapi.testclient import TestClient  # noqa: E402

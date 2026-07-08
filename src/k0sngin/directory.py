@@ -107,6 +107,20 @@ def collect_cascading_formatters(directory: pathlib.Path) -> dict:
     return formatters
 
 
+def parse_globs(value: str) -> list:
+    """Parse a comma-separated glob list — the shared `/all`/`/ignore` syntax.
+
+    Surrounding whitespace per glob is insignificant; empty segments are
+    dropped (so an empty value yields no globs).
+    """
+    return [glob.strip() for glob in value.split(",") if glob.strip()]
+
+
+def matches_any(name: str, globs: list) -> bool:
+    """True if the filename matches at least one glob (``fnmatch``)."""
+    return any(fnmatch.fnmatch(name, glob) for glob in globs)
+
+
 def select_visible_names(disk_entries: dict, declared: dict, local_formatters: dict) -> set:
     """Select which directory entries to list, per the local ``all`` directive.
 
@@ -124,11 +138,8 @@ def select_visible_names(disk_entries: dict, declared: dict, local_formatters: d
     value = local_formatters["all"].strip()
     if not value:
         return {name for name in declared if name in disk_entries}
-    globs = [glob.strip() for glob in value.split(",") if glob.strip()]
-    return {
-        name for name in disk_entries
-        if any(fnmatch.fnmatch(name, glob) for glob in globs)
-    }
+    globs = parse_globs(value)
+    return {name for name in disk_entries if matches_any(name, globs)}
 
 
 def serve_directory(requested_path: pathlib.Path, request: Request, templates: Jinja2Templates) -> dict:
@@ -175,8 +186,18 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             declared = {}
             local_formatters = {}
 
-    # Which entries are visible (the `all` directive; local, non-cascading).
+    # Collect cascading formatters from parent directories (needed now:
+    # `ignore` is a cascading listing filter).
+    cascading_formatters = collect_cascading_formatters(requested_path)
+    merged_formatters = {**cascading_formatters, **local_formatters}
+
+    # Which entries are visible: the `all` directive (local, non-cascading)
+    # selects the set, then `ignore` (cascading, same glob syntax) subtracts
+    # from it.
     visible = select_visible_names(disk_entries, declared, local_formatters)
+    ignore_globs = parse_globs(merged_formatters.get("ignore", ""))
+    if ignore_globs:
+        visible = {name for name in visible if not matches_any(name, ignore_globs)}
 
     # Build the listing: described entries first (in index.ini order), then any
     # remaining entries (directory order) — restricted to the visible set.
@@ -192,14 +213,12 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
             files[name] = data
     template_variables["files"] = files
 
-    # Collect cascading formatters from parent directories
-    cascading_formatters = collect_cascading_formatters(requested_path)
-
-    # Apply formatters (local formatters override cascading ones). `all` and
-    # `template` are handled directly in this function — they control the
-    # listing and the renderer, not template variables — so strip them out.
-    merged_formatters = {**cascading_formatters, **local_formatters}
+    # Apply formatters (local formatters override cascading ones). `all`,
+    # `ignore`, and `template` are handled directly in this function — they
+    # control the listing and the renderer, not template variables — so strip
+    # them out.
     merged_formatters.pop("all", None)
+    merged_formatters.pop("ignore", None)
     merged_formatters.pop("template", None)
     if merged_formatters:
         template_variables = apply_formatters(merged_formatters, requested_path, request, template_variables)
