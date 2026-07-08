@@ -80,8 +80,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         return response
 
-# Always enable rate limiting (60 requests per minute per IP)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+# Always enable rate limiting (60 requests per minute per IP by default;
+# K0SNGIN_RATE_LIMIT overrides, e.g. for the test suite)
+app.add_middleware(RateLimitMiddleware,
+                   requests_per_minute=int(os.environ.get("K0SNGIN_RATE_LIMIT", "60")))
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Initialize Jinja2 templates
