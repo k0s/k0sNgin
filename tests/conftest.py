@@ -49,6 +49,29 @@ _DOCS.mkdir()
 # even though it exists on disk.
 (_TMP_ROOT / "secret.txt").write_text("TOP SECRET\n")
 
+# --- Symlink-allowlist fixtures (K0SNGIN_LINKS; see src/k0sngin/links.py). ---
+# An out-of-tree content directory that IS allowed via links.json…
+_EXTERNAL = _TMP_ROOT / "external"
+_EXTERNAL.mkdir()
+(_EXTERNAL / "poem.txt").write_text("external poem\n")
+(_EXTERNAL / "index.ini").write_text("poem.txt = a poem from outside\n")
+# …including a nested symlink that tries to escape it (must stay unreachable).
+(_EXTERNAL / "escape.txt").symlink_to(_TMP_ROOT / "secret.txt")
+# An out-of-tree directory that is NOT in links.json.
+_NOT_ALLOWED = _TMP_ROOT / "notallowed"
+_NOT_ALLOWED.mkdir()
+(_NOT_ALLOWED / "nope.txt").write_text("should never be served\n")
+
+# Symlinks in the served tree pointing at each.
+(_SITE / "linked").symlink_to(_EXTERNAL)
+(_SITE / "unlisted").symlink_to(_NOT_ALLOWED)
+
+# The links file: same shape as ~/web/ansible/links.json (string pairs; values
+# may be absolute — home-relative resolution is unit-tested separately).
+_LINKS_FILE = _TMP_ROOT / "links.json"
+_LINKS_FILE.write_text('{"site/linked": "%s"}\n' % _EXTERNAL)
+
+os.environ["K0SNGIN_LINKS"] = str(_LINKS_FILE)
 os.environ["K0SNGIN_TOP_LEVEL"] = str(_SITE)
 # The whole suite runs against one app instance from one client IP; keep the
 # rate limiter (60/min default) from 429-ing the later tests.
