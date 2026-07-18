@@ -7,6 +7,7 @@ nested symlink leading outside every allowed root.
 """
 
 import json
+import pathlib
 
 from k0sngin.links import load_link_targets
 
@@ -76,15 +77,29 @@ def test_load_link_targets_non_string_values_disable(tmp_path):
     assert load_link_targets(links) == []
 
 
-def test_load_link_targets_resolves_values(tmp_path, monkeypatch):
-    """Relative values resolve against $HOME; absolute values stand alone."""
-    monkeypatch.setattr("pathlib.Path.home", staticmethod(lambda: tmp_path))
+def test_load_link_targets_expands_tilde_user(tmp_path):
+    """Values in ~user form expand via the password database (expanduser)."""
+    import os
+    import pwd
+    me = pwd.getpwuid(os.getuid())
     links = tmp_path / "links.json"
     links.write_text(json.dumps({
-        "web/site/rel": "docs/rel",
-        "web/site/abs": str(tmp_path / "elsewhere"),
+        "~%s/web/site/tilde" % me.pw_name: "~%s/docs/tilde" % me.pw_name,
+        "/abs/site/abs": str(tmp_path / "elsewhere"),
     }))
     assert load_link_targets(links) == [
-        (tmp_path / "docs/rel").resolve(),
+        (pathlib.Path(me.pw_dir) / "docs/tilde").resolve(),
         (tmp_path / "elsewhere").resolve(),
     ]
+
+
+def test_load_link_targets_relative_value_disables(tmp_path):
+    """Paths must be explicit: a value still relative after ~-expansion
+    (including an unknown ~user, which expanduser leaves untouched)
+    invalidates the whole file."""
+    links = tmp_path / "links.json"
+    links.write_text(json.dumps({"~jhammel/web/site/a": "docs/a"}))
+    assert load_link_targets(links) == []
+    links.write_text(json.dumps(
+        {"~jhammel/web/site/a": "~no-such-user-xyzzy/docs/a"}))
+    assert load_link_targets(links) == []

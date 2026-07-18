@@ -4,8 +4,10 @@ Symlink allowlist: serving through symlinks that leave the content tree.
 ``K0SNGIN_LINKS`` names a JSON file of string key -> string value pairs
 describing the site's intended symlinks — the same file the ansible link
 playbook owns (``~/web/ansible/links.json``): keys are where the links live,
-values are the directories they point at. Paths are home-relative unless
-absolute.
+values are the directories they point at. Paths are explicit: absolute, or
+``~user`` form (expanded with ``os.path.expanduser``). A value that is still
+relative after expansion invalidates the file — there is no implicit "whose
+home?" resolution.
 
 k0sNgin only consumes the *values*: a request may resolve outside
 ``K0SNGIN_TOP_LEVEL`` iff its real path lands under one of the resolved
@@ -43,9 +45,12 @@ def load_link_targets(links_file) -> list:
         return []
     targets = []
     for value in links.values():
-        target = pathlib.Path(value)
+        target = pathlib.Path(os.path.expanduser(value))
         if not target.is_absolute():
-            target = pathlib.Path.home() / target
+            print(f"K0SNGIN_LINKS: value {value!r} is not absolute"
+                  " (use an absolute path or ~user form);"
+                  f" ignoring {links_file}")  # TODO: log this
+            return []
         targets.append(target.resolve())
     return targets
 
