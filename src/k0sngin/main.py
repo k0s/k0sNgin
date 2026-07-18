@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from .directory import serve_directory
+from .links import is_allowed
 from .path import TOP_LEVEL_DIR
 from .version import COMMIT
 
@@ -156,14 +157,23 @@ async def serve_file(file_path: str, request: Request):
         HTTPException: 404 if file not found or outside allowed directory
         HTTPException: 403 if permission denied
     """
-    # Resolve the requested file path
-    requested_path = (TOP_LEVEL_DIR / file_path).resolve()
+    # The requested path, normalized lexically ("." / ".." collapsed) but with
+    # symlinks intact — this is the path we serve, so directory features
+    # (index.ini cascade, local templates) see the content tree, not a
+    # symlink's target.
+    requested_path = pathlib.Path(os.path.normpath(TOP_LEVEL_DIR / file_path))
 
-    # Security check: ensure the file is within the top-level directory
+    # Security check, two layers: the request must stay inside the top-level
+    # directory lexically...
     try:
         requested_path.relative_to(TOP_LEVEL_DIR)
     except ValueError:
         # Path is outside the allowed directory
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # ...and its real path (every symlink followed) must land inside the tree
+    # or inside an allowed link target (K0SNGIN_LINKS).
+    if not is_allowed(requested_path.resolve()):
         raise HTTPException(status_code=404, detail="File not found")
 
     # Check if the file exists

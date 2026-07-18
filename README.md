@@ -32,6 +32,16 @@ The application uses the `K0SNGIN_TOP_LEVEL` environment variable to determine w
 - If not set, files are served from the current working directory
 - The directory is printed on startup for verification
 
+`K0SNGIN_LINKS` (optional) names a JSON file of string key-value pairs
+describing intended symlinks — keys are where links live, values are their
+target directories (home-relative unless absolute), e.g.
+`{"web/site/stories": "docs/stories"}`. A request may resolve outside
+`K0SNGIN_TOP_LEVEL` only if its real path lands under one of these targets;
+nested symlinks that lead elsewhere are still refused (the whole chain is
+resolved before checking). Anything other than a JSON object of strings
+disables the allowlist with a warning. Unset means no symlinks out of the
+tree are followed.
+
 **Security Features (Always Enabled):**
 - Path traversal protection (prevents access to files outside `K0SNGIN_TOP_LEVEL`)
 - Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
