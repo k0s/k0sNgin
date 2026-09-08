@@ -319,3 +319,34 @@ served tree always works, including before any pre-rendering exists.
 
 Files larger than `K0SNGIN_MAX_RENDER_BYTES` (default 2 MiB) are served as-is
 rather than read into memory to render.
+
+### Pre-rendering (`k0sngin-render`)
+
+The console script that makes the zero-miss steady state achievable. Point it at
+the content tree after publishing and no visitor ever pays to render a page:
+
+```
+k0sngin-render ~/web/site                 # the whole tree
+k0sngin-render ~/web/site/notes.md        # one file
+k0sngin-render --dry-run ~/web/site       # what is cold, changing nothing
+k0sngin-render --force ~/web/site         # re-render even warm entries
+k0sngin-render -v ~/web/site              # also say why files were skipped
+```
+
+The cache location is `--cache-dir`, else `K0SNGIN_CACHE_DIR`, else the default;
+the served root is `--top-level`, else `K0SNGIN_TOP_LEVEL`. The root matters
+because artifacts are keyed by path *below* it — get it wrong and you fill a
+cache the server never reads.
+
+**It does not look for `*.md`.** It asks the same question the server asks, via
+the same function, so which files render is decided by `/transformer` and a
+subtree that opts out is skipped. Anything else would let the two disagree, and
+every disagreement is either a permanent miss or an artifact nothing reads.
+
+**It follows symlinked directories.** `site/stories` is a symlink, and the server
+addresses documents under it as `stories/...`; a crawl that skipped links would
+leave exactly those files permanently cold. Loops terminate.
+
+A second run over an unchanged tree renders nothing — entries are verified by
+content digest, so an edited file is re-rendered without `--force`. Exit status
+is non-zero if any file failed, since this normally runs unattended.

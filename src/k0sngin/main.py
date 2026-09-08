@@ -17,8 +17,7 @@ from .directory import collect_cascading_formatters, serve_directory
 from .formatter import apply_formatters
 from .links import is_allowed
 from .path import TOP_LEVEL_DIR
-from .renderers import get_renderer
-from .transformer import is_content_type, resolve_transformer_map, target_for
+from .transformer import UNKNOWN_RENDERER, resolve_renderer
 from .version import COMMIT
 
 HERE = pathlib.Path(__file__).parent
@@ -84,25 +83,15 @@ def renderer_for(requested_path: pathlib.Path):
     means the file is served unchanged, which is what it did before this
     feature existed.
     """
-    mapping = resolve_transformer_map(requested_path.parent)
-    if not mapping:
-        return None
-
-    target = target_for(requested_path.name, mapping)
-    if target is None:
-        return None
-
-    if is_content_type(target):
-        # decoupage's other form: `*.ini=text/plain` overrides a Content-Type
-        # rather than naming a renderer. Recognised so it is not mistaken for a
-        # broken renderer name; not acted on yet.
-        return None
-
-    renderer = get_renderer(target)
+    # Shared with the pre-render CLI (see transformer.resolve_renderer), so the
+    # two cannot disagree about which files render. A Content-Type target —
+    # decoupage's `*.ini=text/plain` form — resolves to no renderer here: it is
+    # recognised so it isn't mistaken for a broken renderer name, not acted on.
+    renderer, reason = resolve_renderer(requested_path)
     if renderer is None:
-        if target not in unknown_transformers:
-            unknown_transformers.add(target)
-            print(f"Renderer not found: {target}")  # TODO: log this; a warning
+        if reason.startswith(UNKNOWN_RENDERER) and reason not in unknown_transformers:
+            unknown_transformers.add(reason)
+            print(f"Renderer not found: {reason}")  # TODO: log this; a warning
         return None
 
     if requested_path.stat().st_size > MAX_RENDER_BYTES:
