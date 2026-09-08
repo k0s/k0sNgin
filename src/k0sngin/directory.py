@@ -86,13 +86,14 @@ def collect_cascading_formatters(directory: pathlib.Path) -> dict:
         if index_conf_path.exists():
             try:
                 conf_data = parse_index_conf(index_conf_path)
-                # Child formatters override parent formatters.
+                # Child formatters override parent formatters, so the first
+                # value seen wins: this walk runs child -> parent, and an
+                # ancestor must not overwrite what a descendant already set.
                 # Local-only directives never cascade.
-                formatters.update({
-                    key: value
-                    for key, value in conf_data["formatters"].items()
-                    if key not in LOCAL_ONLY_FORMATTERS
-                })
+                for key, value in conf_data["formatters"].items():
+                    if key in LOCAL_ONLY_FORMATTERS or key in formatters:
+                        continue
+                    formatters[key] = value
             except Exception:
                 # If parsing fails, continue to parent directory
                 pass
