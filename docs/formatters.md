@@ -6,9 +6,9 @@ alongside the plain `name = description` lines, which describe individual files.
 
 Implemented: [`css`](#css), [`links`](#links), [`title`](#title), [`icon`](#icon),
 [`all`](#all), [`ignore`](#ignore), [`images`](#images), [`template`](#template),
-[`breadcrumbs`](#breadcrumbs), [`include`](#include).
+[`breadcrumbs`](#breadcrumbs), [`include`](#include), [`transformer`](#transformer).
 Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
-`transformer`, `sort`, `formatters`.
+`sort`, `formatters`.
 
 Formatters run in a canonical order (`css`, `links`, `title`, `images`, `icon`,
 `breadcrumbs`, `include`), not the order they appear in `index.ini` — so `links`
@@ -17,7 +17,8 @@ filters the listing after titles/descriptions are settled.
 
 Unless noted, `css`/`title`/`icon`/`breadcrumbs`/`include`/`ignore` **cascade**: a
 directory inherits them from its parents, and a child directory's value overrides
-the parent's.
+the parent's. [`transformer`](#transformer) cascades too, but *merges* per glob
+rather than overriding wholesale — see its section.
 `all`/`images`/`template` are **local-only**: they apply only to the directory
 whose `index.ini` declares them and are never inherited by subdirectories.
 
@@ -221,3 +222,100 @@ that can't be found or read is skipped and logged, never an error.
 
 The contents are inserted **raw** (no escaping, not rendered as a template),
 into the `include_html` template variable consumed by `base.html`.
+
+## `transformer`
+
+Render files to HTML by filename, instead of serving them as-is. The value is a
+comma-separated list of `glob=target` pairs:
+
+```
+/transformer = *.md=markdown
+```
+
+With that in place, `notes.md` is served as a rendered HTML page rather than as
+Markdown source. Files that match no glob are unaffected.
+
+**Renderers.** `target` names a renderer:
+
+| renderer | input | output |
+|----------|-------|--------|
+| `markdown` | GitHub Flavored Markdown | HTML via [cmarkgfm](https://github.com/theacodes/cmarkgfm) (libcmark-gfm — the library GitHub renders with) |
+
+Tables, task lists, strikethrough, autolinks and footnotes all work. **Raw HTML
+embedded in a document is dropped**, not passed through: the site's CSP forbids
+inline `<script>`/`<style>`, so passing it through would only emit markup the
+browser refuses to run. The visible cost is that an `<iframe>` embed
+(bandcamp, soundcloud) in a Markdown file is stripped.
+
+**Content-Type targets.** A `target` containing `/` is a MIME type rather than a
+renderer — decoupage's convention for serving a file unchanged under a different
+type (`*.ini=text/plain`). The form is **parsed and recognised** so it is not
+mistaken for a broken renderer name, but it is **not yet acted on**; those files
+are served exactly as they were before. An unknown renderer *name* is logged once
+and the file served as-is.
+
+**Inheritance.** `/transformer` cascades, but unlike `/ignore` — whose glob list a
+descendant replaces wholesale — transformer maps **merge** down the tree, with the
+most specific directory winning per glob. The value is a mapping rather than a
+list, so a subtree can add one extension without restating what its ancestors
+declared:
+
+```
+# /index.ini
+/transformer = *.md=markdown
+# /mozilla/index.ini — inherits *.md, adds its own
+/transformer = *.py=text/plain
+```
+
+A bare `/transformer =` clears inheritance entirely for that directory and its
+descendants, as with `/ignore`.
+
+When globs overlap, the **first match wins**, scanning most-specific-directory
+first and, within a directory, in declaration order — so a subtree's `*.gv.txt`
+is consulted before an ancestor's `*.txt`.
+
+**Getting the source.** `?format=raw` serves the original file, bypassing
+rendering entirely (also decoupage's behavior).
+
+### Rendered pages
+
+A rendered document is wrapped in `document.html`, which extends `base.html`, so
+it inherits the containing directory's `css`, `icon`, `include` and `breadcrumbs`
+— a document looks like a page of the site rather than a stray file. Its `<title>`
+comes from the document's own first `<h1>`, falling back to the filename;
+`/title` is *not* used, because that names the directory.
+
+### The render cache
+
+Rendered HTML is cached on disk, outside the served tree:
+
+```
+~/.cache/k0sngin/render/<renderer>/<version>/<path below the site root>.html
+```
+
+`K0SNGIN_CACHE_DIR` overrides the location; `XDG_CACHE_HOME` is honoured
+otherwise. Three properties are deliberate:
+
+- **Outside the served tree, and outside any synced or watched directory.**
+  Derived artifacts written into a watched directory re-enter the asset pipeline
+  as file events on every peer; keeping them here makes that loop impossible.
+- **Paths mirror the source tree**, so source and artifact map to each other in
+  both directions without reading either. That is what lets a pre-render pass
+  tell warm from cold with a stat.
+- **Only the rendered fragment is cached**, never the finished page. Restyling
+  the site or editing its navigation invalidates nothing.
+
+Each artifact records its source's SHA-256, so a hit is verified against the
+current file rather than inferred from mtimes — which matters because unison and
+`rsync -t` preserve timestamps and a restore can move content backwards in time.
+Bumping a renderer's version orphans one whole directory: that is both how
+invalidation works and a safe thing to delete. The cache is pure derived data;
+removing any part of it costs a re-render.
+
+Rendering happens in the request path **only on a cache miss**, and every miss is
+logged. The intended steady state is zero misses, with rendering done ahead of
+time; the in-request path is a correctness net so that dropping a file into the
+served tree always works, including before any pre-rendering exists.
+
+Files larger than `K0SNGIN_MAX_RENDER_BYTES` (default 2 MiB) are served as-is
+rather than read into memory to render.
