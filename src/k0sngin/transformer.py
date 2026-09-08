@@ -20,6 +20,7 @@ import fnmatch
 import pathlib
 
 from .path import TOP_LEVEL_DIR
+from .renderers import get_renderer
 
 
 def parse_transformer_map(value: str) -> dict:
@@ -41,13 +42,21 @@ def parse_transformer_map(value: str) -> dict:
     return mapping
 
 
-def resolve_transformer_map(directory: pathlib.Path) -> dict:
+def resolve_transformer_map(directory: pathlib.Path, top_level=None) -> dict:
     """Merge ``/transformer`` from `directory` up to the served root.
 
     Walking child-to-parent and never overwriting an entry means the most
     specific directory wins per glob, and leaves the resulting mapping ordered
     most-specific-first — which is exactly the order `target_for` wants.
+
+    `top_level` names the root to stop at, defaulting to the served one. It is
+    a parameter rather than only a module global because ``TOP_LEVEL_DIR`` is
+    computed once at import: a caller that wants a different root — the
+    pre-render CLI's ``--top-level`` — cannot get one by setting the
+    environment afterwards, and silently walking the wrong tree is a much worse
+    failure than an explicit argument is a cost.
     """
+    root = TOP_LEVEL_DIR if top_level is None else top_level
     mapping = {}
     # Imported here rather than at module scope: directory.py imports formatter
     # machinery, and this module is imported from the serving path in main.py.
@@ -56,7 +65,7 @@ def resolve_transformer_map(directory: pathlib.Path) -> dict:
     current = directory
     while True:
         try:
-            current.relative_to(TOP_LEVEL_DIR)
+            current.relative_to(root)
         except ValueError:
             # Above the served root; nothing here belongs to the site.
             break
@@ -106,3 +115,49 @@ def is_content_type(target: str) -> bool:
     names a renderer.
     """
     return "/" in target
+
+
+# Why a file is not being rendered. Returned alongside the renderer so callers
+# can say *which* "no" they hit: the pre-render CLI reports these per file, and
+# a file that should be rendering but isn't is diagnosed by reading this rather
+# than by guessing at the cascade.
+NO_DIRECTIVE = "no /transformer in the cascade"
+NO_MATCH = "no /transformer glob matches"
+CONTENT_TYPE = "maps to a Content-Type, not a renderer"
+UNKNOWN_RENDERER = "renderer not found"
+
+
+def resolve_renderer(path: pathlib.Path, top_level=None) -> tuple:
+    """The renderer for `path`, as ``(renderer, reason)``.
+
+    Exactly one of the two is meaningful: a renderer with `reason` None, or
+    None with a `reason` naming the "no". Callers that only need a yes/no can
+    ignore the second element.
+
+    This is the single definition of "would this file be rendered". The server
+    and the pre-render CLI both call it, deliberately: if they answered that
+    question separately they would eventually disagree, and every disagreement
+    is either a permanent cache miss or an artifact nothing ever reads.
+
+    Note that `path` is used as given, symlinks intact. That matches how the
+    server addresses a file — `site/stories` is a symlink, and a document
+    beneath it belongs to the site tree at `stories/...`, not at the link's
+    target — so resolving here would look up the wrong directory's `index.ini`
+    and key the wrong cache entry.
+    """
+    mapping = resolve_transformer_map(path.parent, top_level)
+    if not mapping:
+        return None, NO_DIRECTIVE
+
+    target = target_for(path.name, mapping)
+    if target is None:
+        return None, NO_MATCH
+
+    if is_content_type(target):
+        return None, CONTENT_TYPE
+
+    renderer = get_renderer(target)
+    if renderer is None:
+        return None, f"{UNKNOWN_RENDERER}: {target}"
+
+    return renderer, None
