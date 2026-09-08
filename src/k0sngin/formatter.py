@@ -330,6 +330,25 @@ class TitleFormatter(Formatter):
 
         return result
 
+class TransformerFormatter(Formatter):
+    """``/transformer`` — which renderer handles which files.
+
+    Registered here only so that a directory declaring ``/transformer`` is not
+    reported as using an unknown formatter. It has no effect on a directory
+    *listing*: the directive is consumed by the file-serving path, which
+    resolves it per requested file. See ``transformer.py``.
+    """
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "transformer"
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> None:
+        """Nothing to do: the listing is unaffected by transformers."""
+        return None
+
+
 # Canonical application order: `links` must extract alternate-form link
 # segments before `title` splits descriptions on ':'; `images` filters the
 # listing after titles/descriptions are settled.
@@ -341,6 +360,7 @@ all_formatters = [
     IconFormatter,
     BreadcrumbsFormatter,
     IncludeFormatter,
+    TransformerFormatter,
 ]
 
 formatters = {formatter.key(): formatter for formatter in all_formatters}

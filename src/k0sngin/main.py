@@ -1,7 +1,9 @@
 import hashlib
+import html
 import mimetypes
 import os
 import pathlib
+import re
 import time
 from collections import defaultdict
 from email.utils import formatdate, parsedate_to_datetime
@@ -10,9 +12,13 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from .directory import serve_directory
+from .cache import RenderCache
+from .directory import collect_cascading_formatters, serve_directory
+from .formatter import apply_formatters
 from .links import is_allowed
 from .path import TOP_LEVEL_DIR
+from .renderers import get_renderer
+from .transformer import is_content_type, resolve_transformer_map, target_for
 from .version import COMMIT
 
 HERE = pathlib.Path(__file__).parent
@@ -34,6 +40,78 @@ def cache_control_for(media_type) -> str:
     return "no-cache"
 
 
+# Rendering happens in the request path only on a cache miss. In steady state
+# the asset pipeline has already rendered everything, so a miss means a gap in
+# the pipeline rather than ordinary traffic — hence the warning on every one.
+# The size cap keeps a pathologically large "text" file from being read whole
+# into memory here; above it, the file is served as itself.
+MAX_RENDER_BYTES = int(os.environ.get("K0SNGIN_MAX_RENDER_BYTES", str(2 * 1024 * 1024)))
+render_cache = RenderCache()
+
+# Formatters that describe the *page* rather than a directory listing. A
+# rendered document takes these from its containing directory, so it carries
+# the site's stylesheets, favicon, navigation header and breadcrumbs. `title`
+# is deliberately excluded: `/title` names the directory, not the document.
+PAGE_FORMATTERS = ("css", "icon", "include", "breadcrumbs")
+
+# Transformer names we've already complained about, so a misconfigured
+# directory costs one warning rather than one per request.
+unknown_transformers = set()
+
+first_heading = re.compile(r"<h1[^>]*>(.*?)</h1>", re.IGNORECASE | re.DOTALL)
+markup = re.compile(r"<[^>]+>")
+
+
+def document_title(fragment: str, fallback: str) -> str:
+    """A document's title: its first heading, else `fallback`.
+
+    Taking the title from the content means a Markdown file names its own page
+    the same way it names itself when read as source.
+    """
+    match = first_heading.search(fragment)
+    if not match:
+        return fallback
+    title = html.unescape(markup.sub("", match.group(1))).strip()
+    return title or fallback
+
+
+def renderer_for(requested_path: pathlib.Path):
+    """The renderer that should transform this file, or None to serve it as-is.
+
+    Resolves `/transformer` from the containing directory up to the served
+    root. Every "no" here — no directive, no matching glob, a Content-Type
+    override rather than a renderer, an unknown renderer, an oversized file —
+    means the file is served unchanged, which is what it did before this
+    feature existed.
+    """
+    mapping = resolve_transformer_map(requested_path.parent)
+    if not mapping:
+        return None
+
+    target = target_for(requested_path.name, mapping)
+    if target is None:
+        return None
+
+    if is_content_type(target):
+        # decoupage's other form: `*.ini=text/plain` overrides a Content-Type
+        # rather than naming a renderer. Recognised so it is not mistaken for a
+        # broken renderer name; not acted on yet.
+        return None
+
+    renderer = get_renderer(target)
+    if renderer is None:
+        if target not in unknown_transformers:
+            unknown_transformers.add(target)
+            print(f"Renderer not found: {target}")  # TODO: log this; a warning
+        return None
+
+    if requested_path.stat().st_size > MAX_RENDER_BYTES:
+        print(f"Too large to render, serving as-is: {requested_path}")  # TODO: log
+        return None
+
+    return renderer
+
+
 def file_etag(stat_result) -> str:
     """ETag for a file — Starlette's FileResponse formula, reproduced so the
     etags we validate against are the same ones FileResponse has been
@@ -42,16 +120,24 @@ def file_etag(stat_result) -> str:
     return f'"{hashlib.md5(etag_base.encode(), usedforsecurity=False).hexdigest()}"'
 
 
+def etag_matches(request: Request, etag: str) -> bool | None:
+    """Whether ``If-None-Match`` accepts `etag`; None if the client sent none."""
+    if_none_match = request.headers.get("if-none-match")
+    if not if_none_match:
+        return None
+    tokens = {token.strip().removeprefix("W/")
+              for token in if_none_match.split(",")}
+    return "*" in tokens or etag in tokens
+
+
 def client_cache_is_fresh(request: Request, etag: str, mtime: float) -> bool:
     """True if the client's conditional headers show it already has the file.
 
     ``If-None-Match`` wins over ``If-Modified-Since`` (RFC 9110 §13.1.3).
     """
-    if_none_match = request.headers.get("if-none-match")
-    if if_none_match:
-        tokens = {token.strip().removeprefix("W/")
-                  for token in if_none_match.split(",")}
-        return "*" in tokens or etag in tokens
+    matched = etag_matches(request, etag)
+    if matched is not None:
+        return matched
     if_modified_since = request.headers.get("if-modified-since")
     if if_modified_since:
         try:
@@ -138,6 +224,52 @@ app.add_middleware(SecurityHeadersMiddleware)
 templates = Jinja2Templates(directory=HERE / "templates")
 
 
+def serve_document(requested_path: pathlib.Path, request: Request, renderer) -> Response:
+    """Serve a file rendered to HTML, wrapped in the containing directory's chrome.
+
+    Only the rendered *fragment* is cached. The page around it is assembled per
+    request from the directory's cascading formatters, so restyling the site or
+    editing its navigation shows up immediately and invalidates no artifacts.
+    """
+    source = requested_path.read_bytes()
+    relative_source = requested_path.relative_to(TOP_LEVEL_DIR)
+    fragment, was_cached = render_cache.get_or_render(source, relative_source, renderer)
+    if not was_cached:
+        # Loud on purpose: with the asset pipeline pre-rendering, a miss is a
+        # gap in the pipeline. This line is the signal that target is slipping.
+        print(f"Render cache miss: {relative_source} ({renderer.name})")  # TODO: log
+
+    directory = requested_path.parent
+    variables = {"files": {}, "request": request, "document_html": fragment}
+    cascading = collect_cascading_formatters(directory)
+    page_formatters = {key: value for key, value in cascading.items()
+                       if key in PAGE_FORMATTERS}
+    apply_formatters(page_formatters, directory, request, variables)
+
+    variables["title"] = document_title(fragment, requested_path.name)
+    variables["directory_name"] = requested_path.name
+    # The document's parent is the directory holding it, not the directory above.
+    path_info = request.scope.get("path", "/")
+    variables["parent_url"] = path_info.rsplit("/", 1)[0] + "/"
+
+    body = templates.get_template("document.html").render(**variables)
+
+    # The ETag covers the *response*, not the source file: the same Markdown
+    # renders differently after a renderer upgrade or a change to the site's
+    # CSS cascade, and a source-derived etag would claim otherwise.
+    etag = f'"{hashlib.md5(body.encode("utf-8"), usedforsecurity=False).hexdigest()}"'
+    headers = {
+        "etag": etag,
+        "cache-control": "no-cache",
+        "last-modified": formatdate(requested_path.stat().st_mtime, usegmt=True),
+    }
+    # Deliberately If-None-Match only. `If-Modified-Since` would wrongly report
+    # "not modified" when the source is untouched but the rendered page changed.
+    if etag_matches(request, etag):
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
+    return Response(content=body, media_type="text/html; charset=utf-8", headers=headers)
+
+
 @app.api_route("/{file_path:path}", methods=["GET", "HEAD"])
 async def serve_file(file_path: str, request: Request):
     """
@@ -187,6 +319,14 @@ async def serve_file(file_path: str, request: Request):
         if file_path.strip('/') and not file_path.endswith('/'):
             return RedirectResponse(url=f"/{file_path}/", status_code=301)
         return serve_directory(requested_path, request, templates)
+
+    # Extension-based rendering: `/transformer` may map this file to a renderer
+    # (see transformer.py). `?format=raw` bypasses it and serves the source, as
+    # it did in decoupage.
+    if request.query_params.get("format") != "raw":
+        renderer = renderer_for(requested_path)
+        if renderer is not None:
+            return serve_document(requested_path, request, renderer)
 
     # Conditional requests: answer 304 when the client's cache is current.
     stat_result = requested_path.stat()

@@ -71,6 +71,70 @@ _NOT_ALLOWED.mkdir()
 _LINKS_FILE = _TMP_ROOT / "links.json"
 _LINKS_FILE.write_text('{"site/linked": "%s"}\n' % _EXTERNAL)
 
+# --- Rendered-document fixtures (/transformer; see src/k0sngin/transformer.py).
+# `documents/` opts into Markdown rendering and sets page chrome; each
+# subdirectory exercises one way the directive can resolve differently from
+# its parent.
+_DOCUMENTS = _SITE / "documents"
+_DOCUMENTS.mkdir()
+(_DOCUMENTS / "index.ini").write_text(
+    "/transformer = *.md=markdown\n"
+    "/css = /documents.css\n"
+    "/icon = /documents.ico\n"
+)
+(_DOCUMENTS / "notes.md").write_text(
+    "# Notes on Deployment\n"
+    "\n"
+    "| key | value |\n"
+    "|-----|-------|\n"
+    "| a   | 1     |\n"
+    "\n"
+    "~~struck~~ text and a task list:\n"
+    "\n"
+    "- [x] done\n"
+    "- [ ] pending\n"
+    "\n"
+    "<script>alert(\"xss\")</script>\n"
+)
+
+# Inherits /transformer from documents/ while overriding /css — a descendant's
+# value must win over its ancestor's.
+_NESTED = _DOCUMENTS / "nested"
+_NESTED.mkdir()
+(_NESTED / "index.ini").write_text("/css = /nested.css\n")
+(_NESTED / "deep.md").write_text("# Deep\n\nnested body\n")
+
+# No index.ini at all: inherits the directive unchanged.
+_PLAIN = _DOCUMENTS / "plain"
+_PLAIN.mkdir()
+(_PLAIN / "inner.md").write_text("# Inner\n\ninner body\n")
+
+# A bare `/transformer =` stops inheritance: these files stay untransformed.
+_OPAQUE = _DOCUMENTS / "opaque"
+_OPAQUE.mkdir()
+(_OPAQUE / "index.ini").write_text("/transformer =\n")
+(_OPAQUE / "off.md").write_text("# Off\n\nnot rendered\n")
+
+# decoupage's Content-Type form (a `/` in the value) rather than a renderer.
+_TYPED = _DOCUMENTS / "typed"
+_TYPED.mkdir()
+(_TYPED / "index.ini").write_text("/transformer = *.md=text/plain\n")
+(_TYPED / "typed.md").write_text("# Typed\n\nnot rendered\n")
+
+# A renderer that doesn't exist: must degrade to serving the file, not 500.
+_UNKNOWN = _DOCUMENTS / "unknown"
+_UNKNOWN.mkdir()
+(_UNKNOWN / "index.ini").write_text("/transformer = *.md=NoSuchRenderer\n")
+(_UNKNOWN / "mystery.md").write_text("# Mystery\n\nnot rendered\n")
+
+# Outside any directory declaring /transformer: served as source, as before.
+(_SITE / "untouched.md").write_text("# Untouched\n\nplain source\n")
+
+# The render cache lives outside the served tree — as it must in production,
+# so derived artifacts never re-enter the asset pipeline as file events.
+_CACHE_ROOT = _TMP_ROOT / "cache"
+os.environ["K0SNGIN_CACHE_DIR"] = str(_CACHE_ROOT)
+
 os.environ["K0SNGIN_LINKS"] = str(_LINKS_FILE)
 os.environ["K0SNGIN_TOP_LEVEL"] = str(_SITE)
 # The whole suite runs against one app instance from one client IP; keep the
@@ -92,3 +156,9 @@ def client() -> TestClient:
 def site_root() -> pathlib.Path:
     """Path to the served top-level directory (``K0SNGIN_TOP_LEVEL``)."""
     return _SITE
+
+
+@pytest.fixture(scope="session")
+def cache_root() -> pathlib.Path:
+    """Path to the render cache root (``K0SNGIN_CACHE_DIR``)."""
+    return _CACHE_ROOT

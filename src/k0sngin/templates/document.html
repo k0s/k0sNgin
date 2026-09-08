@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{#
+   A rendered document (e.g. a Markdown file) shown as a page of the site.
+
+   The body is a cached fragment produced by a renderer; everything around it
+   comes from the containing directory's cascading formatters, so a document
+   inherits the same stylesheets, favicon, site navigation and breadcrumbs its
+   sibling directory index would show. Nothing here is cached with the
+   fragment, which is why restyling the site invalidates no artifacts.
+#}
+{% block body %}
+<article class="document">{{ document_html|safe }}</article>
+{% endblock %}
