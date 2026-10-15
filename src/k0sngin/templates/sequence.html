@@ -8,7 +8,11 @@
 {% endblock %}
 {% block body %}
     {% set images = files.values()|list %}
-    {% set index = request.query_params.get('index', 0)|int %}
+    {# ?index= takes a position or a filename; a numeric value is always a position #}
+    {% set requested = request.query_params.get('index') or '0' %}
+    {% if requested.lstrip('-').isdigit() %}{% set index = requested|int %}
+    {% elif requested in files %}{% set index = (files.keys()|list).index(requested) %}
+    {% else %}{% set index = -1 %}{% endif %}
     {% if images and index >= 0 and index < images|length %}
     {% set image = images[index] %}
     <div class="gallery gallery-sequence">

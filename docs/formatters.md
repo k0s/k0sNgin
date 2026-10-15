@@ -171,7 +171,7 @@ Built-in gallery templates (all expect `/images` in the same `index.ini`):
 |----------|--------------|
 | `strip.html` | Images in a vertical filmstrip, captions beneath, `<hr>` between. |
 | `grid.html` | CSS grid, `columns` wide (montage used a table). |
-| `sequence.html` | One image per page, web-comic style; `?index=N` plus prev/next links. |
+| `sequence.html` | One image per page, web-comic style; `?index=N` or `?index=<filename>` (a numeric value is always a position) plus prev/next links. |
 | `background.html` | Images strip over a full-page background image; `?image=<name>` selects the background (first image by default). |
 
 Precedence: a valid `/template` > a local `index.html` file in the directory >

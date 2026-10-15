@@ -8,6 +8,7 @@ over a local index.html file, and never loads templates from the content tree
 """
 
 import pathlib
+import re
 
 
 def _make_gallery(site_root: pathlib.Path, name: str, ini, descriptions=None) -> pathlib.Path:
@@ -108,3 +109,32 @@ def test_background_image_selection(client, site_root):
 
     bogus = client.get("/tpl_bg/?image=nope.jpg").text
     assert "url('a.jpg')" in bogus
+
+
+def test_sequence_index_by_filename(client, site_root):
+    """sequence.html accepts ?index=<filename> as an alias for its position."""
+    _make_gallery(site_root, "tpl_seq_name",
+                  ini="/images =\n/template = sequence.html\n")
+    seen = set()
+    for position in range(3):
+        by_position = client.get(f"/tpl_seq_name/?index={position}").text
+        name = re.search(r'<div class="image" id="([^"]+)">', by_position).group(1)
+        seen.add(name)
+        assert client.get(f"/tpl_seq_name/?index={name}").text == by_position
+    assert seen == {"a.jpg", "b.jpg", "c.jpg"}
+
+    missing = client.get("/tpl_seq_name/?index=nope.jpg").text
+    assert 'class="gallery gallery-sequence"' not in missing
+
+
+def test_sequence_numeric_index_beats_filename(client, site_root):
+    """A numeric ?index= is a position even when a file has that name."""
+    d = site_root / "tpl_seq_numeric"
+    d.mkdir()
+    for fname in ["5", "a", "b"]:
+        (d / fname).write_bytes(b"stub")
+    (d / "index.ini").write_text("/template = sequence.html\n")
+    # position 5 is out of range, so nothing renders -- not the file named "5"
+    html = client.get("/tpl_seq_numeric/?index=5").text
+    assert 'class="gallery gallery-sequence"' not in html
+    assert 'href="5"' not in html
