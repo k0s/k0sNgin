@@ -10,6 +10,9 @@ over a local index.html file, and never loads templates from the content tree
 import pathlib
 import re
 
+import pytest
+from jinja2.exceptions import SecurityError
+
 
 def _make_gallery(site_root: pathlib.Path, name: str, ini, descriptions=None) -> pathlib.Path:
     """Create <site_root>/<name>/ with three stub images and an index.ini."""
@@ -138,3 +141,27 @@ def test_sequence_numeric_index_beats_filename(client, site_root):
     html = client.get("/tpl_seq_numeric/?index=5").text
     assert 'class="gallery gallery-sequence"' not in html
     assert 'href="5"' not in html
+
+
+def test_local_index_html_renders_in_sandbox(client, site_root):
+    """A local index.html renders ordinary template syntax, but runs sandboxed.
+
+    Local templates live in the served tree, so they are treated as content:
+    variables, loops and filters work, and access to Python internals does not.
+    """
+    d = site_root / "tpl_local_ok"
+    d.mkdir()
+    (d / "a.txt").write_text("a")
+    (d / "index.html").write_text(
+        "<h1>{{ title | default('Local') }}</h1>"
+        "{% for i in range(2) %}<i>{{ i }}</i>{% endfor %}"
+    )
+    response = client.get("/tpl_local_ok/")
+    assert response.status_code == 200
+    assert "<i>0</i><i>1</i>" in response.text
+
+    d = site_root / "tpl_local_internals"
+    d.mkdir()
+    (d / "index.html").write_text("{{ ''.__class__.__mro__ }}")
+    with pytest.raises(SecurityError):
+        client.get("/tpl_local_internals/")

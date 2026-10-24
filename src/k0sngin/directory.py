@@ -7,7 +7,8 @@ import pathlib
 from fastapi import Request, HTTPException, Response
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import FileSystemLoader
+from jinja2.sandbox import SandboxedEnvironment
 
 from .formatter import apply_formatters
 from .parser import parse_config
@@ -275,8 +276,11 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
                 headers=index_headers,
             )
 
-        # File is UTF-8, use it as a template
-        env = Environment(loader=FileSystemLoader(str(requested_path)))
+        # File is UTF-8, use it as a template. Local templates are content,
+        # not code: they come from the served tree, which may be synced from
+        # other devices. The sandbox keeps a template to rendering variables,
+        # loops and filters, and stops it reaching Python internals.
+        env = SandboxedEnvironment(loader=FileSystemLoader(str(requested_path)))
         template = env.get_template("index.html")
         html_content = template.render(**template_variables)
         return Response(content=html_content, media_type="text/html",
