@@ -276,10 +276,9 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
                 headers=index_headers,
             )
 
-        # File is UTF-8, use it as a template. Local templates are content,
-        # not code: they come from the served tree, which may be synced from
-        # other devices. The sandbox keeps a template to rendering variables,
-        # loops and filters, and stops it reaching Python internals.
+        # File is UTF-8, use it as a template. The sandbox keeps a template to
+        # rendering variables, loops and filters, and stops it reaching Python
+        # internals.
         env = SandboxedEnvironment(loader=FileSystemLoader(str(requested_path)))
         template = env.get_template("index.html")
         html_content = template.render(**template_variables)
