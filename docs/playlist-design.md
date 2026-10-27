@@ -27,11 +27,14 @@ Abyss.mp3 = Abyss
 ...
 ```
 
-Turning on the player (here, or once in a parent, see *Opt-in*):
+Turning on the player once, in `/sound/synth/index.ini` (see *Opt-in*):
 
 ```
-/audio = cover=pure_Nothing.jpg
+/audio =
 ```
+
+`pure_Nothing/` has one image, so it becomes the cover with no line of its
+own.
 
 - `/sound/synth/pure_Nothing/` shows the cover, the title, and the ten tracks
   in `index.ini` order, with Play all, previous, next and stop. Each row plays
@@ -51,7 +54,8 @@ Turning on the player (here, or once in a parent, see *Opt-in*):
 ## Behavior
 
 - **Opt-in** through an `/audio` directive in `index.ini`, a sibling of
-  `/images`. Without it, directories list as they do today.
+  `/images`. It cascades, and `/audio = off` opts a subtree out (see
+  *Opt-in*). Without it, directories list as they do today.
 - **Which files are tracks:** entries whose guessed mimetype is `audio/*`, in
   listing order (listed in `index.ini` first, then the rest if `/all` is set).
   Titles come from the descriptions, after `/title` has split them.
@@ -94,7 +98,9 @@ Turning on the player (here, or once in a parent, see *Opt-in*):
 Key `audio`. Runs after `title` in the canonical order, as `images` does.
 It partitions `variables["files"]` into `tracks` (ordered), `cover` and
 `others`, sets `audio: True` and `gap`, and leaves `files` as `others` so the
-ordinary list template still works.
+ordinary list template still works. Not in `LOCAL_ONLY_FORMATTERS`, so it cascades.
+A bare `/audio =` means on with defaults; `off`/`false`/`no` does nothing,
+and a directory with no audio files is left unchanged.
 
 ### Template (`templates/_player.html`)
 
@@ -123,18 +129,23 @@ attribute), and highlights the current row. No dependencies and no inline
 handlers. It is generalized from the hand-built player at
 `/sound/samples/shining/`.
 
-## Opt-in: local or cascading
+## Opt-in: cascading, with opt-out
 
-`images` is local-only (it only affects the directory that declares it).
-Open question: should `/audio` cascade, so one line in
-`/sound/synth/index.ini` turns on the player for every album beneath it?
+Decided 2026-10-27: `/audio` **cascades**, as `/breadcrumbs` does, unlike the
+local-only `/images`. One line in `/sound/synth/index.ini` turns on the player
+for about twenty album directories beneath it.
 
-- **Cascading:** one edit covers about twenty album directories. It only
-  takes effect where a directory has audio files, so `sound/synth/` itself is
-  unaffected. A per-album `cover=` still goes in each album's own `index.ini`,
-  unless the one-image fallback covers it.
-- **Local:** consistent with `/images`, and each album opts in explicitly, at
-  the cost of an edit per album.
+- It only takes effect in a directory that has audio files, so
+  `sound/synth/` itself, which only holds album subdirectories, is unaffected.
+- The nearest `index.ini` wins. A descendant opts out with `/audio = off`
+  (also `false`/`no`), which applies to it and its own descendants. A deeper
+  directory can turn the player back on with its own `/audio` line.
+- A child's value replaces the inherited one wholesale; it is not merged. An
+  album that sets `/audio = cover=front.jpg` under a parent's `gap=1.5` gets a
+  gap of 0 unless it repeats `gap=1.5`. Most albums need no line of their own,
+  since the one-image cover fallback covers them.
+- `cover=` names a file relative to the directory being shown. Set on a
+  parent, it only finds a cover in albums that have a file of that name.
 
 ## Limits
 
@@ -150,6 +161,9 @@ pytest, alongside the existing suite:
 - Formatter: tracks filtered by mimetype and ordered as listed; titles from
   descriptions; `/all` appends unlisted tracks; `cover=` and the one-image
   fallback; `gap` parsing; non-audio entries kept in `others`.
+- Cascade: inherited by a child album; no effect on a directory without
+  audio; `/audio = off` (and `false`/`no`) opts a subtree out; a deeper
+  `/audio` turns it back on; a child's value replaces the parent's wholesale.
 - Page: the playlist markup, the m3u link and `<link rel="alternate">`; a
   directory without `/audio` is unchanged.
 - M3U: header, `#PLAYLIST`, `#EXTINF` titles, absolute URLs (https behind a
@@ -182,4 +196,5 @@ cross-origin limit.
   explicit request.
 - 2026-10-17: the direction changed to the directory as source, with M3U as
   an output.
-- 2026-10-27: this document rewritten for that direction.
+- 2026-10-27: this document rewritten for that direction. `/audio` made
+  cascading, with `off` to opt out.
