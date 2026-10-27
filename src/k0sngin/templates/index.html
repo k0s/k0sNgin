@@ -1,4 +1,10 @@
 {% extends "base.html" %}
+{% block head %}
+    {% if audio %}
+    <link rel="stylesheet" type="text/css" href="/_k0sngin/playlist.css" />
+    <link rel="alternate" type="audio/mpegurl" href="?format=m3u" title="M3U playlist" />
+    {% endif %}
+{% endblock %}
 {% block body %}
     {% if title %}
     <h1>{{ title }}</h1>
@@ -6,6 +12,9 @@
     <h1>{{ directory_name }}</h1>
     {% endif %}
 
+    {% if audio %}{% include "_player.html" %}{% endif %}
+
+    {% if files or not audio %}
     <ul class="file-list">
         {% for file_name, file_info in files.items() %}
         {% set link_text = file_info.title or file_info.description or file_name %}
@@ -18,4 +27,5 @@
         </li>
         {% endfor %}
     </ul>
+    {% endif %}
 {% endblock %}
