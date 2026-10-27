@@ -13,6 +13,7 @@ from jinja2.sandbox import SandboxedEnvironment
 from .formatter import apply_formatters
 from .parser import parse_config
 from .path import TOP_LEVEL_DIR
+from .playlist import m3u_response
 
 # Built-in page templates (also passed to serve_directory as `templates`).
 TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
@@ -242,6 +243,12 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
         template_variables["parent_url"] = path_info.rstrip("/").rsplit("/", 1)[0] + "/"
 
     template_variables["request"] = request
+
+    # `?format=m3u` on an audio directory: the same tracks as a playlist for
+    # media players. Anywhere else the parameter is ignored, like any unknown
+    # query parameter.
+    if request.query_params.get("format") == "m3u" and template_variables.get("audio"):
+        return m3u_response(template_variables, request)
 
     # Explicit /template (local-only): select a built-in template by name.
     # It takes precedence over a local index.html file (as in decoupage).
