@@ -1,0 +1,24 @@
+<div class="player" data-gap="{{ gap }}">
+    {% if cover %}
+    <img class="player-cover" src="{{ cover|urlencode }}" alt="">
+    {% endif %}
+    <div class="player-controls" hidden>
+        <button type="button" data-action="play">▶ Play all</button>
+        <button type="button" data-action="prev" aria-label="Previous">⏮</button>
+        <button type="button" data-action="next" aria-label="Next">⏭</button>
+        <button type="button" data-action="stop">■ Stop</button>
+    </div>
+    <audio class="player-audio" controls preload="none" hidden></audio>
+    <ol class="playlist">
+        {% for track in tracks %}
+        <li data-src="{{ track.name|urlencode }}">
+            <a href="{{ track.name|urlencode }}" class="track-title">{{ track.label }}</a>
+            {% if track.description and track.description != track.label %}
+            <span class="track-description">{{ track.description }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    <p class="player-m3u"><a href="?format=m3u">Open in a media player (M3U)</a></p>
+</div>
+<script src="/_k0sngin/playlist.js" defer></script>
