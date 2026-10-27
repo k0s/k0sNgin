@@ -1,6 +1,6 @@
 # Design: audio directories as browser players, with M3U as an output
 
-Status: approved 2026-10-27, not yet implemented. Supersedes the 2026-10-15
+Status: approved 2026-10-27; implemented in this PR. Supersedes the 2026-10-15
 design, which rendered hand-written `.m3u` files as players (see *History*).
 
 ## Goal

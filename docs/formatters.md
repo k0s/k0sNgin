@@ -13,9 +13,9 @@ Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`)
 Formatters run in a canonical order (`css`, `links`, `title`, `images`, `icon`,
 `breadcrumbs`, `include`), not the order they appear in `index.ini` — so `links`
 strips its link segments before `title` splits descriptions on `:`, and `images`
-filters the listing after titles/descriptions are settled.
+filters the listing after titles/descriptions are settled, as `audio` does.
 
-Unless noted, `css`/`title`/`icon`/`breadcrumbs`/`include`/`ignore` **cascade**: a
+Unless noted, `css`/`title`/`icon`/`breadcrumbs`/`include`/`ignore`/`audio` **cascade**: a
 directory inherits them from its parents, and a child directory's value overrides
 the parent's. [`transformer`](#transformer) cascades too, but *merges* per glob
 rather than overriding wholesale — see its section.
@@ -155,6 +155,36 @@ CPU-free).
 Each surviving file entry gets `link` (the full image) and `src` (the thumbnail
 if used, else the full image); the page gets `width`, `height`, `columns`, and
 `images = true` template variables.
+
+## `audio`
+
+Audio player. A directory with audio files renders as a page that plays them in
+order: Play all, previous, next, stop, a visible audio control, and click a row
+to play it. Without JavaScript the tracks are plain links.
+
+```
+/audio = cover=front.jpg, gap=1.5
+```
+
+- **Tracks** are entries whose name guesses as `audio/*` (not `.m3u`/`.pls`), in
+  listing order. Each row shows the title (after [`title`](#title) splits a
+  description on `:`) and, under it, the rest of the description.
+- `cover=<file>`: image above the tracks. Without it, the directory's only image
+  file is used, if it has exactly one, even if `/all` hides it from the listing.
+- `gap=<seconds>`: silence between tracks (default 0).
+- Other files and subdirectories are listed below the player.
+- **`?format=m3u`** on the same URL returns the tracks as an M3U playlist with
+  absolute URLs (`#EXTINF` duration `-1`), for VLC, mpv and other players. The
+  page links to it. On a directory without `/audio`, the parameter is ignored.
+- **Cascades**: one line in a parent turns on every directory beneath it that has
+  audio; directories without audio are unaffected. The nearest value wins, and it
+  replaces the inherited one wholesale (not merged). `/audio = off` (also
+  `false`/`no`) opts a subtree out.
+- The player's script and default styles are served from `/_k0sngin/`, a
+  **reserved path**: a content directory named `_k0sngin` at the root is
+  shadowed. The default styles have zero specificity, so a directory's
+  [`css`](#css) overrides them.
+- Media must be same-origin (the CSP's `default-src 'self'`).
 
 ## `template`
 
