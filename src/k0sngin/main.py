@@ -212,6 +212,25 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Initialize Jinja2 templates
 templates = Jinja2Templates(directory=HERE / "templates")
 
+# Files shipped with k0sNgin itself (the audio player's script and styles).
+# They can't live in the content tree, and the CSP (`script-src 'self'`) needs
+# them same-origin. `/_k0sngin/` is therefore reserved: a content directory of
+# that name is shadowed.
+STATIC_DIR = HERE / "static"
+
+
+@app.api_route("/_k0sngin/{name}", methods=["GET", "HEAD"])
+async def serve_static(name: str):
+    """Serve a file from the package's static directory: bare names only, no listing."""
+    path = STATIC_DIR / name
+    if (name != pathlib.PurePosixPath(name).name or name.startswith(".")
+            or not path.is_file()):
+        raise HTTPException(status_code=404, detail="File not found")
+    response = FileResponse(path=str(path), media_type=mimetypes.guess_type(name)[0])
+    # Revalidate: these change with deploys, not with content.
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
 
 def serve_document(requested_path: pathlib.Path, request: Request, renderer) -> Response:
     """Serve a file rendered to HTML, wrapped in the containing directory's chrome.
