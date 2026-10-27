@@ -5,6 +5,7 @@ Formatters for the directory index.
 # TODO: cascading formatters. They will need to know about their parent.
 
 from abc import ABC, abstractmethod
+import math
 import mimetypes
 import pathlib
 import re
@@ -273,6 +274,99 @@ class ImagesFormatter(Formatter):
         }
 
 
+class AudioFormatter(Formatter):
+    """Audio player: split the listing into ordered tracks, a cover and the rest.
+
+    ``/audio`` makes a directory's index a page that plays its tracks (see
+    docs/playlist-design.md). The value takes ``/images``-style arguments::
+
+        /audio = cover=front.jpg, gap=1.5
+
+    - ``cover``: image shown above the tracks. Without it, the directory's
+      only image file is used, if it has exactly one.
+    - ``gap``: seconds of silence between tracks (default 0).
+
+    Cascades: one line in a parent covers every album below it. A directory
+    with no audio files keeps its ordinary listing, and ``/audio = off``
+    opts a subtree out.
+    """
+
+    off_values = {"off", "false", "no"}
+    # Playlists guess as audio/* too, but they aren't tracks.
+    playlist_types = {"audio/mpegurl", "audio/x-mpegurl", "audio/x-scpls"}
+
+    @classmethod
+    def key(cls) -> str:
+        """Key for the formatter."""
+        return "audio"
+
+    @classmethod
+    def is_track(cls, name: str) -> bool:
+        """True if the file name guesses as playable audio."""
+        mimetype = mimetypes.guess_type(name)[0]
+        return bool(mimetype and mimetype.startswith("audio/")
+                    and mimetype not in cls.playlist_types)
+
+    @staticmethod
+    def is_image(name: str) -> bool:
+        """True if the file name guesses as an image."""
+        mimetype = mimetypes.guess_type(name)[0]
+        return bool(mimetype and mimetype.startswith("image/"))
+
+    @classmethod
+    def find_cover(cls, directory: pathlib.Path, requested: str):
+        """The cover's file name, or None.
+
+        Looks at the disk rather than the listing, because ``/all =`` hides
+        files that index.ini doesn't describe, and an album's cover usually
+        isn't described.
+        """
+        if requested:
+            if (requested == pathlib.PurePosixPath(requested).name
+                    and cls.is_image(requested)
+                    and (directory / requested).is_file()):
+                return requested
+            return None
+        images = [item.name for item in directory.iterdir()
+                  if item.is_file() and cls.is_image(item.name)]
+        return images[0] if len(images) == 1 else None
+
+    @staticmethod
+    def parse_gap(value: str) -> float:
+        """Seconds between tracks; anything unusable means no gap."""
+        try:
+            gap = float(value)
+        except ValueError:
+            return 0.0
+        return gap if math.isfinite(gap) and gap > 0 else 0.0
+
+    def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> dict:
+        """Format the directory index."""
+        if value.strip().lower() in self.off_values:
+            return None
+        files = variables.get("files", {})
+        tracks = []
+        for name, data in files.items():
+            if self.is_track(name):
+                track = dict(data, name=name)
+                track["label"] = data.get("title") or data.get("description") or name
+                tracks.append(track)
+        if not tracks:
+            return None
+
+        _flags, kwargs = ImagesFormatter.parse_args(value)
+        cover = self.find_cover(directory, kwargs.get("cover", ""))
+        others = {name: data for name, data in files.items()
+                  if not self.is_track(name) and name != cover}
+        return {
+            "audio": True,
+            "tracks": tracks,
+            "cover": cover,
+            "gap": self.parse_gap(kwargs.get("gap", "0")),
+            "files": others,
+        }
+
+
 class TitleFormatter(Formatter):
     """Title for the directory index.
     Splits a description into a title and a description via a separator in
@@ -351,12 +445,14 @@ class TransformerFormatter(Formatter):
 
 # Canonical application order: `links` must extract alternate-form link
 # segments before `title` splits descriptions on ':'; `images` filters the
-# listing after titles/descriptions are settled.
+# listing after titles/descriptions are settled, and `audio` likewise splits
+# it into tracks.
 all_formatters = [
     CSSFormatter,
     LinksFormatter,
     TitleFormatter,
     ImagesFormatter,
+    AudioFormatter,
     IconFormatter,
     BreadcrumbsFormatter,
     IncludeFormatter,
