@@ -1,6 +1,6 @@
 # Design: audio directories as browser players, with M3U as an output
 
-Status: revised 2026-10-27, not yet implemented. Supersedes the 2026-10-15
+Status: approved 2026-10-27, not yet implemented. Supersedes the 2026-10-15
 design, which rendered hand-written `.m3u` files as players (see *History*).
 
 ## Goal
@@ -58,7 +58,13 @@ own.
   *Opt-in*). Without it, directories list as they do today.
 - **Which files are tracks:** entries whose guessed mimetype is `audio/*`, in
   listing order (listed in `index.ini` first, then the rest if `/all` is set).
-  Titles come from the descriptions, after `/title` has split them.
+  Titles come from the descriptions, after `/title` has split them. When a
+  description splits into a title and a description (`quote : speaker`), the
+  row shows both, the second line dimmer, as the Shining page shows a quote
+  and who says it.
+- **Controls**, as on the Shining page: Play all, previous, next, stop; a
+  visible `<audio controls>` (seek, volume); numbered rows; the current row
+  highlighted and scrolled into view; click any row to play from there.
 - **Other entries:** the cover image is shown at the top. Any other files and
   subdirectories stay in an ordinary list below the player, so nothing that is
   reachable today disappears.
@@ -74,6 +80,31 @@ own.
   it in the head as
   `<link rel="alternate" type="audio/mpegurl" href="?format=m3u">`.
 - **Styling** comes from the cascading `/css`, as for every directory page.
+
+## Reference page: `/sound/samples/shining/`
+
+The hand-built page that inspired this project, and its acceptance test: the
+page is rebuilt on `/audio`, and its `index.html`, `player.js`, `lineup.txt`
+and `lineup_leveled.m3u` are retired. When in doubt about behavior, match it.
+
+| Hand-built today | With `/audio` |
+|---|---|
+| Order in `lineup.txt` | Order in `index.ini` |
+| `CAPTIONS` in `player.js`: quote and speaker | Descriptions `quote : speaker`, split by `/title` |
+| `GAP_MS = 1500` | `/audio = gap=1.5` |
+| `lineup_leveled.m3u`, written by hand | `?format=m3u`, generated |
+| Inline CSS: hexagon carpet, colours, type | A `/css` stylesheet in the directory |
+| Intro paragraph with Bandcamp links; typed line | An `/include` fragment |
+
+Known differences to settle in the implementation plan:
+
+- The hand-written M3U has real durations. The generated one has `-1`.
+- `/include` goes above the heading, while the intro paragraph sits below it
+  today.
+- One clip is marked "(under the music)" through a special case in the script.
+  It becomes part of that clip's description.
+- `/title` splits on the first `:`, so a quote that contains a colon needs
+  care. None of the current quotes has one.
 
 ## `?format=m3u`
 
@@ -105,7 +136,8 @@ and a directory with no audio files is left unchanged.
 ### Template (`templates/_player.html`)
 
 `index.html` includes the player partial when `audio` is set: cover, an
-`<ol class="playlist">` of `<li data-src="…"><a href="…">title</a></li>`,
+`<ol class="playlist">` of `<li data-src="…"><a href="…">title</a>`
+plus an optional `<span class="description">`, a visible `<audio controls>`,
 the m3u link, and `<script src="/_k0sngin/playlist.js" defer>`.
 
 ### M3U response (`main.py` / `directory.py`)
@@ -161,6 +193,9 @@ pytest, alongside the existing suite:
 - Formatter: tracks filtered by mimetype and ordered as listed; titles from
   descriptions; `/all` appends unlisted tracks; `cover=` and the one-image
   fallback; `gap` parsing; non-audio entries kept in `others`.
+- Acceptance, by hand: the Shining page rebuilt on `/audio` plays the same
+  clips in the same order with the same gap, captions and controls, and its
+  `?format=m3u` opens in VLC.
 - Cascade: inherited by a child album; no effect on a directory without
   audio; `/audio = off` (and `false`/`no`) opts a subtree out; a deeper
   `/audio` turns it back on; a child's value replaces the parent's wholesale.
@@ -197,4 +232,5 @@ cross-origin limit.
 - 2026-10-17: the direction changed to the directory as source, with M3U as
   an output.
 - 2026-10-27: this document rewritten for that direction. `/audio` made
-  cascading, with `off` to opt out.
+  cascading, with `off` to opt out. Defaults approved (Jeff). The Shining
+  page set as the reference and acceptance test.
