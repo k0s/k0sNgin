@@ -172,7 +172,9 @@ to play it. Without JavaScript the tracks are plain links.
 - `cover=<file>`: image above the tracks. Without it, the directory's only image
   file is used, if it has exactly one, even if `/all` hides it from the listing.
 - `gap=<seconds>`: silence between tracks (default 0).
-- Other files and subdirectories are listed below the player.
+- Other files and subdirectories are listed below the player. Templates get
+  `tracks`, `cover`, `gap`, `audio = true`, and `other_files`; `files` stays the
+  full listing, so a directory's own `index.html` is unaffected.
 - **`?format=m3u`** on the same URL returns the tracks as an M3U playlist with
   absolute URLs (`#EXTINF` duration `-1`), for VLC, mpv and other players. The
   page links to it. On a directory without `/audio`, the parameter is ignored.

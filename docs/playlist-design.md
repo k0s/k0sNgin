@@ -128,8 +128,9 @@ Known differences to settle in the implementation plan:
 
 Key `audio`. Runs after `title` in the canonical order, as `images` does.
 It partitions `variables["files"]` into `tracks` (ordered), `cover` and
-`others`, sets `audio: True` and `gap`, and leaves `files` as `others` so the
-ordinary list template still works. Not in `LOCAL_ONLY_FORMATTERS`, so it cascades.
+`other_files`, and sets `audio: True` and `gap`. It leaves `files` whole, so a
+directory's own `index.html` that loops over `files` still lists its tracks;
+the built-in `index.html` lists `other_files` below the player. Not in `LOCAL_ONLY_FORMATTERS`, so it cascades.
 A bare `/audio =` means on with defaults; `off`/`false`/`no` does nothing,
 and a directory with no audio files is left unchanged.
 
