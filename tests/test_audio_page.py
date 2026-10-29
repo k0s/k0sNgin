@@ -68,3 +68,18 @@ def test_cascade(client, site_root):
     assert 'class="player"' not in client.get("/aud_tree/quiet/").text
     # back on below the opt-out; a child's value replaces the parent's wholesale
     assert 'data-gap="0.0"' in client.get("/aud_tree/quiet/loud/").text
+
+
+def test_local_template_still_lists_tracks(client, site_root):
+    # A hand-built album page under a cascading /audio loops over `files`;
+    # it must still see the tracks (regression: they were moved to `tracks`).
+    d = _album(site_root, "aud_custom", ini="/audio =\n")
+    _album(site_root, "aud_custom/album", ["one.mp3", "two.mp3", "art.jpg"],
+           "/all =\none.mp3 = First\ntwo.mp3 = Second\n")
+    (d / "album" / "index.html").write_text(
+        "{% for name, info in files.items() %}"
+        "<a href=\"{{ name }}\">{{ info.description }}</a>"
+        "{% endfor %}")
+    html = client.get("/aud_custom/album/").text
+    assert '<a href="one.mp3">First</a>' in html
+    assert '<a href="two.mp3">Second</a>' in html

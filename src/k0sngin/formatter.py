@@ -363,7 +363,9 @@ class AudioFormatter(Formatter):
             "tracks": tracks,
             "cover": cover,
             "gap": self.parse_gap(kwargs.get("gap", "0")),
-            "files": others,
+            # `files` stays whole: a directory's own index.html may list
+            # tracks from it. The built-in page lists `other_files`.
+            "other_files": others,
         }
 
 

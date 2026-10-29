@@ -14,9 +14,10 @@
 
     {% if audio %}{% include "_player.html" %}{% endif %}
 
-    {% if files or not audio %}
+    {% set listing = other_files if audio else files %}
+    {% if listing or not audio %}
     <ul class="file-list">
-        {% for file_name, file_info in files.items() %}
+        {% for file_name, file_info in listing.items() %}
         {% set link_text = file_info.title or file_info.description or file_name %}
         <li class="file-item">
             <a href="{{ file_name }}" class="file-link">{{ link_text }}</a>

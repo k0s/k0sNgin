@@ -41,14 +41,15 @@ def test_non_tracks_stay_in_files(tmp_path):
     files = _listing("a.mp3", "notes.txt")
     files["sub"] = {"name": "sub", "type": "directory"}
     result = _format("", d, files)
-    assert list(result["files"]) == ["notes.txt", "sub"]
+    assert list(result["other_files"]) == ["notes.txt", "sub"]
+    assert "files" not in result  # the full listing is left in place
 
 
 def test_playlists_are_not_tracks(tmp_path):
     d = _dir(tmp_path, ["a.mp3", "list.m3u", "list.pls"])
     result = _format("", d, _listing("a.mp3", "list.m3u", "list.pls"))
     assert [t["name"] for t in result["tracks"]] == ["a.mp3"]
-    assert "list.m3u" in result["files"]
+    assert "list.m3u" in result["other_files"]
 
 
 def test_label_prefers_title_then_description_then_name(tmp_path):
@@ -84,7 +85,7 @@ def test_cover_explicit(tmp_path):
     d = _dir(tmp_path, ["a.mp3", "front.jpg", "back.jpg"])
     result = _format("cover=front.jpg", d, _listing("a.mp3", "front.jpg", "back.jpg"))
     assert result["cover"] == "front.jpg"
-    assert list(result["files"]) == ["back.jpg"]
+    assert list(result["other_files"]) == ["back.jpg"]
 
 
 def test_cover_explicit_must_be_a_local_image(tmp_path):
