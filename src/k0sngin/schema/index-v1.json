@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://k0s.org/schemas/index-v1.json",
+  "title": "index.json, version 1",
+  "description": "Per-directory metadata. The top level and entries are for any reader; each other object is one tool's namespace. Unknown fields are allowed everywhere: readers ignore them and rewriters keep them.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "version": {"const": 1},
+    "title": {"type": "string", "description": "The directory's title."},
+    "description": {"type": "string", "description": "One line about the directory."},
+    "link": {"type": "string", "description": "A URL the title links to."},
+    "entries": {
+      "description": "The directory's described entries. Order is authored and is the display order.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "description": "A file or subdirectory name in this directory."},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "links": {
+            "description": "Other forms of the same thing: link text to target.",
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+          },
+          "tags": {"type": "array", "items": {"type": "string"}},
+          "hidden": {"type": "boolean", "description": "Described, but left out of listings."}
+        }
+      }
+    },
+    "k0sngin": {
+      "description": "How k0sNgin presents the directory.",
+      "type": "object",
+      "properties": {
+        "all": {
+          "description": "Which entries are listed. Omitted or true: everything in the directory. false: only the entries above. A list: exactly the names matching one of these globs. Not inherited.",
+          "oneOf": [
+            {"type": "boolean"},
+            {"type": "array", "items": {"type": "string"}}
+          ]
+        },
+        "ignore": {"description": "Globs for names to leave out. Inherited; an empty list clears what was inherited.", "type": "array", "items": {"type": "string"}},
+        "css": {"description": "Stylesheets. Inherited.", "type": "array", "items": {"type": "string"}},
+        "icon": {"description": "Favicon URL. Inherited.", "type": "string"},
+        "include": {"description": "An HTML fragment for the top of the page. Inherited.", "type": "string"},
+        "breadcrumbs": {"description": "A linked trail of ancestors. Inherited.", "type": "boolean"},
+        "layout": {"description": "The built-in page template, by stem: grid, strip, sequence, background. Not inherited.", "type": "string"},
+        "images": {
+          "description": "An image gallery. Not inherited.",
+          "type": "object",
+          "properties": {
+            "thumbnails": {"type": "boolean", "description": "Show thumb_dir/thumb_prefix + name where that file exists."},
+            "width": {"type": "integer", "minimum": 1},
+            "height": {"type": "integer", "minimum": 1},
+            "columns": {"type": "integer", "minimum": 1},
+            "thumb_dir": {"type": "string"},
+            "thumb_prefix": {"type": "string"}
+          }
+        },
+        "audio": {
+          "description": "An audio player; false turns an inherited one off. Inherited.",
+          "oneOf": [
+            {"const": false},
+            {
+              "type": "object",
+              "properties": {
+                "cover": {"type": "string"},
+                "gap": {"type": "number", "minimum": 0}
+              }
+            }
+          ]
+        },
+        "transformer": {
+          "description": "Glob to renderer name or Content-Type. Key order is match order. Inherited and merged; an empty object clears.",
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        }
+      }
+    }
+  }
+}

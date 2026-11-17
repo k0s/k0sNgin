@@ -60,7 +60,7 @@ def resolve_transformer_map(directory: pathlib.Path, top_level=None) -> dict:
     mapping = {}
     # Imported here rather than at module scope: directory.py imports formatter
     # machinery, and this module is imported from the serving path in main.py.
-    from .directory import parse_index_conf
+    from .index import read_index
 
     current = directory
     while True:
@@ -70,14 +70,14 @@ def resolve_transformer_map(directory: pathlib.Path, top_level=None) -> dict:
             # Above the served root; nothing here belongs to the site.
             break
 
-        index_conf = current / "index.ini"
-        if index_conf.exists():
-            try:
-                formatters = parse_index_conf(index_conf)["formatters"]
-            except Exception:
-                # An unparseable index.ini shouldn't disable transformers for
-                # the whole subtree; skip this level as the indexer does.
-                formatters = {}
+        try:
+            index = read_index(current)
+        except Exception:
+            # Unparseable metadata shouldn't disable transformers for
+            # the whole subtree; skip this level as the indexer does.
+            index = None
+        if index is not None:
+            formatters = index["formatters"]
             if "transformer" in formatters:
                 value = formatters["transformer"].strip()
                 if not value:
