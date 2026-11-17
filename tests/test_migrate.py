@@ -249,11 +249,25 @@ def test_existing_files_are_skipped_without_force(tree):
     assert json.loads((tree / "index.json").read_text())["title"] == "Root"
 
 
-def test_output_is_one_entry_per_line(tree):
+def test_output_is_indented_by_two_spaces(tree):
     run("--write", "--top-level", tree, tree)
-    assert (tree / "index.json").read_text() == (
-        '{\n  "version": 1,\n  "title": "Root",\n  "entries": [\n'
-        '    {"name": "a.txt", "title": "A", "description": "first"}\n  ]\n}\n')
+    assert (tree / "index.json").read_text() == """{
+  "version": 1,
+  "title": "Root",
+  "entries": [
+    {
+      "name": "a.txt",
+      "title": "A",
+      "description": "first"
+    }
+  ]
+}
+"""
+
+
+def test_non_ascii_is_written_as_itself():
+    assert dumps({"version": 1, "title": "Forever — samples"}) == (
+        '{\n  "version": 1,\n  "title": "Forever — samples"\n}\n')
 
 
 def test_symlinked_directories_are_followed_once(tree, tmp_path):
