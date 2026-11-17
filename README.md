@@ -66,7 +66,9 @@ k0sNgin comes with formatters for the directory indices.
   (comma-separated, whitespace-insignificant, e.g. `*.txt, *.png`) renders exactly
   the entries whose filename matches a glob. Local to the directory (not cascading).
 
-See [`docs/formatters.md`](docs/formatters.md) for the full specification.
+See [`docs/formatters.md`](docs/formatters.md) for the full specification, and
+[`docs/index-json.md`](docs/index-json.md) for `index.json`, the JSON form of the
+same metadata, and `k0sngin-migrate`, which converts to it.
 
 Not yet implemented (parsed but ignored, logged as `Formatter not found: <key>`):
 
