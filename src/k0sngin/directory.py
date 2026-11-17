@@ -11,7 +11,7 @@ from jinja2 import FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
 
 from .formatter import apply_formatters
-from .parser import parse_config
+from .index import INI, JSON, parse_ini, read_index
 from .path import TOP_LEVEL_DIR
 from .playlist import m3u_response
 
@@ -37,68 +37,67 @@ class DirectoryIndexer:
 
 def parse_index_conf(index_conf_path: pathlib.Path) -> dict:
     """Parse the index.ini file and return formatters and files separately."""
-
     with open(index_conf_path, 'r') as f:
-        conf_content = f.read()
-    parsed = parse_config(conf_content)
-
-    # Extract formatters
-    formatters = {}
-    for item in list(parsed.keys()):
-        if item.startswith("/"):
-            key = item[1:].strip()
-            if not key:
-                raise ValueError(f"Empty key: {item}")
-            value = parsed.pop(item).strip()
-            formatters[key] = value
-
-    # Extract file information
-    files = {}
-    for key, value in parsed.items():
-        if not key.startswith("/") and not key.startswith("_"):
-            files[key] = {
-                "description": value,
-                "name": key
-            }
-    return {
-        "formatters": formatters,
-        "files": files
-    }
+        return parse_ini(f.read())
 
 
-def collect_cascading_formatters(directory: pathlib.Path) -> dict:
+# The directives that tell the server how to read index.ini descriptions.
+# index.json names those fields outright, which changes how they inherit.
+PARSE_SWITCHES = {"title", "links"}
+
+
+def collect_cascading_formatters(directory: pathlib.Path, top_level=None) -> dict:
     """
     Collect formatters by walking up the directory tree from the given directory
     to the root, with child directories overriding parent formatters.
+
+    ``title`` (and ``links``) inherit differently once ``index.json`` is
+    involved. In ``index.ini`` they are switches for reading descriptions, and
+    a directory's title is also the title of everything beneath it. An
+    ``index.json`` title names its own directory only. So a title is inherited
+    from an ``index.ini`` by anything but an ``index.json`` directory, and from
+    an ``index.json`` only by an ``index.ini`` directory, whose descriptions
+    still need the switch. A tree of ``index.ini`` files behaves as it always
+    has.
     """
+    root = TOP_LEVEL_DIR if top_level is None else top_level
     formatters = {}
+    local_source = None
+    settled = set()     # parse switches some nearer directory already decided
 
     # Walk up the directory tree from current to root
     current_dir = directory
     while True:
         # Check if we've reached the top-level directory
         try:
-            current_dir.relative_to(TOP_LEVEL_DIR)
+            current_dir.relative_to(root)
         except ValueError:
             # We've gone above the top-level directory, stop here
             break
 
-        # Look for index.ini in current directory
-        index_conf_path = current_dir / "index.ini"
-        if index_conf_path.exists():
-            try:
-                conf_data = parse_index_conf(index_conf_path)
-                # Child formatters override parent formatters, so the first
-                # value seen wins: this walk runs child -> parent, and an
-                # ancestor must not overwrite what a descendant already set.
-                # Local-only directives never cascade.
-                for key, value in conf_data["formatters"].items():
-                    if key in LOCAL_ONLY_FORMATTERS or key in formatters:
+        try:
+            conf_data = read_index(current_dir)
+        except Exception:
+            # If parsing fails, continue to parent directory
+            conf_data = None
+        is_local = current_dir == directory
+        if is_local and conf_data is not None:
+            local_source = conf_data["source"]
+        if conf_data is not None:
+            # Child formatters override parent formatters, so the first
+            # value seen wins: this walk runs child -> parent, and an
+            # ancestor must not overwrite what a descendant already set.
+            # Local-only directives never cascade.
+            for key, value in conf_data["formatters"].items():
+                if key in LOCAL_ONLY_FORMATTERS or key in formatters or key in settled:
+                    continue
+                if key in PARSE_SWITCHES and not is_local:
+                    settled.add(key)
+                    inherits = (local_source == "ini" if conf_data["source"] == "json"
+                                else local_source != "json")
+                    if not inherits:
                         continue
-                    formatters[key] = value
-            except Exception:
-                # If parsing fails, continue to parent directory
-                pass
+                formatters[key] = value
 
         # Move to parent directory
         parent = current_dir.parent
@@ -178,16 +177,15 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     # index.ini for THIS directory: described files + local formatters.
     declared = {}
     local_formatters = {}
-    index_conf_path = requested_path / "index.ini"
-    if index_conf_path.exists():
-        try:
-            conf_data = parse_index_conf(index_conf_path)
-            declared = conf_data["files"]
-            local_formatters = conf_data["formatters"]
-        except Exception:
-            # If parsing fails, fall back to a plain listing.
-            declared = {}
-            local_formatters = {}
+    try:
+        conf_data = read_index(requested_path)
+    except Exception as exc:
+        # If parsing fails, fall back to a plain listing.
+        print(f"Unreadable directory metadata: {exc}")  # TODO: log this
+        conf_data = None
+    if conf_data is not None:
+        declared = conf_data["files"]
+        local_formatters = conf_data["formatters"]
 
     # Collect cascading formatters from parent directories (needed now:
     # `ignore` is a cascading listing filter).
@@ -201,6 +199,12 @@ def serve_directory(requested_path: pathlib.Path, request: Request, templates: J
     ignore_globs = parse_globs(merged_formatters.get("ignore", ""))
     if ignore_globs:
         visible = {name for name in visible if not matches_any(name, ignore_globs)}
+        # Where index.ini is hidden, so is the index.json that replaced it.
+        # Only as metadata: some other JSON with that name is still a file.
+        if conf_data is not None and conf_data["source"] == "json" \
+                and matches_any(INI, ignore_globs):
+            visible.discard(JSON)
+    visible -= {name for name, data in declared.items() if data.get("hidden")}
 
     # Build the listing: described entries first (in index.ini order), then any
     # remaining entries (directory order) — restricted to the visible set.

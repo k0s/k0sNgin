@@ -12,6 +12,7 @@ import re
 
 from fastapi import Request
 
+from .index import STRUCTURED
 from .path import TOP_LEVEL_DIR
 
 
@@ -117,7 +118,7 @@ class LinksFormatter(Formatter):
         files = variables.get('files', {})
         for file_data in files.values():
             description = file_data.get('description')
-            if not description:
+            if not description or file_data.get(STRUCTURED):
                 continue
             links = dict(self.link_re.findall(description))
             if not links:
@@ -385,17 +386,21 @@ class TitleFormatter(Formatter):
 
     def format(self, value: str, directory: pathlib.Path, request: Request, variables: dict) -> dict:
         """Format the directory index."""
-        value = value.strip()
-        if not value:
-            return None
-
         # Default separator
         separator = ':'
 
         # Set webpage title
         result = {}
 
-        if ':' in value:
+        if isinstance(value, dict):
+            # From index.json: the title and its link are already apart, and
+            # so are every entry's (they are marked, and skipped below).
+            result['title'] = value['title']
+            if value.get('link'):
+                result['link'] = value['link']
+        elif not value.strip():
+            return None
+        elif ':' in (value := value.strip()):
             _title, url = [i.strip() for i in value.split(':', 1)]
             if '://' in url:
                 # Title with URL link
@@ -412,6 +417,8 @@ class TitleFormatter(Formatter):
         files = variables.get('files', {})
         for file_name, file_data in files.items():
             description = file_data.get('description')
+            if file_data.get(STRUCTURED):
+                continue
             if description and separator in description:
                 # Split description into title and description
                 file_title, file_description = description.split(separator, 1)

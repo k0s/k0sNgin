@@ -130,6 +130,67 @@ _UNKNOWN.mkdir()
 # Outside any directory declaring /transformer: served as source, as before.
 (_SITE / "untouched.md").write_text("# Untouched\n\nplain source\n")
 
+# --- index.json fixtures (see src/k0sngin/index.py). ---
+# The same content as docs/, as index.json: the two must render alike.
+_JSONDOCS = _SITE / "jsondocs"
+_JSONDOCS.mkdir()
+for _name in ("readme.txt", "notes.txt", "report.html", "report.pdf", "paper.txt",
+              "paper.pdf", "secret-draft.txt"):
+    (_JSONDOCS / _name).write_text("body\n")
+(_JSONDOCS / "index.json").write_text("""{
+  "version": 1,
+  "title": "Docs",
+  "link": "https://example.org/docs",
+  "entries": [
+    {"name": "readme.txt", "title": "the readme", "description": "a description"},
+    {"name": "notes.txt", "description": "just some notes"},
+    {"name": "report.html", "description": "The Report", "links": {"PDF": "report.pdf"}},
+    {"name": "paper.txt", "title": "A Paper", "description": "with details: and a colon",
+     "links": {"PDF": "paper.pdf"}, "tags": ["paper"]},
+    {"name": "secret-draft.txt", "description": "not listed", "hidden": true}
+  ],
+  "k0sngin": {"ignore": ["index.ini", "*.pdf"], "css": ["/json.css"]},
+  "someone-else": {"anything": [1, 2, 3]}
+}
+""")
+# No metadata of its own, under an index.json directory.
+(_JSONDOCS / "bare").mkdir()
+(_JSONDOCS / "bare" / "file.txt").write_text("body\n")
+# An index.ini directory under an index.json one: it still needs the title
+# switch to read its own descriptions.
+(_JSONDOCS / "legacy").mkdir()
+(_JSONDOCS / "legacy" / "old.txt").write_text("body\n")
+(_JSONDOCS / "legacy" / "index.ini").write_text("old.txt = Old Title : old description\n")
+# index.json wins where a directory has both.
+_BOTH = _SITE / "bothformats"
+_BOTH.mkdir()
+(_BOTH / "a.txt").write_text("body\n")
+(_BOTH / "index.ini").write_text("/title = From INI\na.txt = ini description\n")
+(_BOTH / "index.json").write_text(
+    '{"version": 1, "title": "From JSON", "entries": [{"name": "a.txt", "description": "json description"}]}\n')
+# A file named index.json that is somebody's data, not directory metadata.
+_DATA = _SITE / "jsondata"
+_DATA.mkdir()
+(_DATA / "index.json").write_text('{"nodes": [1, 2, 3]}\n')
+(_DATA / "index.ini").write_text("/title = Data\nindex.json = the data : a graph\n")
+# Metadata that is broken: the directory falls back to a plain listing.
+_BROKEN = _SITE / "jsonbroken"
+_BROKEN.mkdir()
+(_BROKEN / "a.txt").write_text("body\n")
+(_BROKEN / "index.json").write_text('{"version": 1, "entries": "not a list"}\n')
+# An index.json directory under an index.ini one that sets a title.
+_UNDERINI = _DOCS / "converted"
+_UNDERINI.mkdir()
+(_UNDERINI / "x.txt").write_text("body\n")
+(_UNDERINI / "index.json").write_text(
+    '{"version": 1, "entries": [{"name": "x.txt", "description": "keeps: its colon"}]}\n')
+# Markdown rendering asked for from index.json.
+_JSONMD = _SITE / "jsonmd"
+_JSONMD.mkdir()
+(_JSONMD / "page.md").write_text("# From JSON\n\nbody\n")
+(_JSONMD / "index.json").write_text(
+    '{"version": 1, "k0sngin": {"transformer": {"*.md": "markdown"}}}\n')
+
 # The render cache lives outside the served tree — as it must in production,
 # so derived artifacts never re-enter the asset pipeline as file events.
 _CACHE_ROOT = _TMP_ROOT / "cache"
