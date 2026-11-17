@@ -4,6 +4,9 @@ Formatters are `index.ini` **directives** — keys beginning with `/` (e.g.
 `/title`, `/all`) — that control how k0sNgin renders a directory index. They sit
 alongside the plain `name = description` lines, which describe individual files.
 
+The same settings can be written in [`index.json`](index-json.md), under its
+`"k0sngin"` key, with structured values instead of argument strings.
+
 Implemented: [`css`](#css), [`links`](#links), [`title`](#title), [`icon`](#icon),
 [`all`](#all), [`ignore`](#ignore), [`images`](#images), [`template`](#template),
 [`breadcrumbs`](#breadcrumbs), [`include`](#include), [`transformer`](#transformer).
