@@ -20,6 +20,8 @@ NAMESPACE = "k0sngin"
 # For directives this server parses and ignores. They are decoupage's, the
 # server index.ini was written for; carried so that converting loses nothing.
 LEGACY_NAMESPACE = "decoupage"
+# index.json is indented by two spaces, for reading and editing by hand.
+INDENT = 2
 
 
 def _number(text: str):
@@ -173,22 +175,11 @@ def convert(text: str, in_force: dict | None = None) -> tuple[dict, list]:
 
 
 def dumps(data: dict) -> str:
-    """``index.json`` text meant to be edited by hand: one entry per line,
-    one namespace key per line, nothing escaped that doesn't need to be."""
-    def compact(value) -> str:
-        return json.dumps(value, ensure_ascii=False)
-
-    lines = []
-    for key, value in data.items():
-        if key == "entries":
-            body = ",\n".join(f"    {compact(entry)}" for entry in value)
-            lines.append(f'  "entries": [\n{body}\n  ]')
-        elif isinstance(value, dict) and value:
-            body = ",\n".join(f"    {compact(k)}: {compact(v)}" for k, v in value.items())
-            lines.append(f"  {compact(key)}: {{\n{body}\n  }}")
-        else:
-            lines.append(f"  {compact(key)}: {compact(value)}")
-    return "{\n" + ",\n".join(lines) + "\n}\n"
+    """``index.json`` text as it should be on disk: JSON indented by two
+    spaces, non-ASCII written as itself, ending in a newline. The files are
+    meant to be read and edited by hand, and anything that rewrites one
+    should write it this way."""
+    return json.dumps(data, indent=INDENT, ensure_ascii=False) + "\n"
 
 
 def missing_entries(data: dict, directory: pathlib.Path) -> list:

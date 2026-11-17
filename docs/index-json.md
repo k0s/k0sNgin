@@ -17,6 +17,11 @@ server how to take it apart. An `index.json` names each field:
 }
 ```
 
+**Formatting:** indent by two spaces, as `json.dumps(data, indent=2,
+ensure_ascii=False)` writes it, with a trailing newline. The files are for reading
+and editing by hand; `k0sngin-migrate` writes them this way, and anything else that
+rewrites one should too. The server reads any valid JSON.
+
 Both formats work, indefinitely, and a tree can mix them. Where a directory has
 both files, `index.json` wins and the server logs a warning. The schema is
 [`src/k0sngin/schema/index-v1.json`](../src/k0sngin/schema/index-v1.json).
